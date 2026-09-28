@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from datetime import date, time
 from math import isfinite
+from re import fullmatch
 from types import MappingProxyType
 from typing import Literal
 
@@ -159,8 +160,76 @@ class TrendSettings(SettingsSection):
         return self
 
 
+class VolatilitySettings(SettingsSection):
+    enabled: bool = True
+    intraday_horizons_ns: Mapping[str, int] = Field(
+        default_factory=lambda: {
+            "5m": 300_000_000_000,
+            "15m": 900_000_000_000,
+            "30m": 1_800_000_000_000,
+            "1h": 3_600_000_000_000,
+        }
+    )
+    session_horizons: tuple[int, ...] = (5, 10, 20, 60)
+    short_window_sessions: int = Field(default=5, ge=2)
+    medium_window_sessions: int = Field(default=20, ge=2)
+    long_window_sessions: int = Field(default=60, ge=2)
+    baseline_sessions: int = Field(default=60, gt=0)
+    minimum_baseline_samples: int = Field(default=20, gt=0)
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    trading_sessions_per_year: int = Field(default=252, gt=0)
+    minimum_window_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_market_coverage: float = Field(default=0.67, gt=0, le=1, allow_inf_nan=False)
+    enabled_estimators: tuple[
+        Literal["parkinson", "garman_klass", "rogers_satchell", "yang_zhang"], ...
+    ] = ("parkinson", "garman_klass", "rogers_satchell", "yang_zhang")
+    index_weights: Mapping[str, float] = Field(default_factory=dict)
+
+    @field_serializer("intraday_horizons_ns", "index_weights")
+    def serialize_maps(self, values: Mapping[str, object]) -> dict[str, object]:
+        return dict(values)
+
+    @model_validator(mode="after")
+    def validate_volatility(self) -> "VolatilitySettings":
+        if not self.short_window_sessions < self.medium_window_sessions < self.long_window_sessions:
+            raise ValueError("volatility windows must satisfy short < medium < long")
+        if len(set(self.session_horizons)) != len(self.session_horizons) or any(
+            item < 2 for item in self.session_horizons
+        ):
+            raise ValueError("session horizons must be unique and at least two")
+        if (
+            self.medium_window_sessions not in self.session_horizons
+            or self.short_window_sessions not in self.session_horizons
+            or self.long_window_sessions not in self.session_horizons
+        ):
+            raise ValueError("short, medium and long windows must be session horizons")
+        if self.minimum_baseline_samples > self.baseline_sessions:
+            raise ValueError("minimum baseline samples cannot exceed baseline sessions")
+        if not self.intraday_horizons_ns or any(
+            name == "session" or fullmatch(r"[a-z0-9][a-z0-9_]*", name) is None or length <= 0
+            for name, length in self.intraday_horizons_ns.items()
+        ):
+            raise ValueError("intraday horizons need unique canonical names and positive lengths")
+        if len(set(self.enabled_estimators)) != len(self.enabled_estimators):
+            raise ValueError("enabled estimators must be unique")
+        normalized_weights: dict[str, float] = {}
+        for name, weight in self.index_weights.items():
+            symbol = normalize_symbol(name)
+            if weight <= 0 or not isfinite(weight) or symbol in normalized_weights:
+                raise ValueError(
+                    "index weights must have unique symbols and positive finite values"
+                )
+            normalized_weights[symbol] = weight
+        object.__setattr__(
+            self, "intraday_horizons_ns", MappingProxyType(dict(self.intraday_horizons_ns))
+        )
+        object.__setattr__(self, "index_weights", MappingProxyType(normalized_weights))
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
+    volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
 
 
 class ReproducibilitySettings(SettingsSection):
