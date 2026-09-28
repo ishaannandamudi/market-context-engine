@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 from pydantic import Field, field_serializer
 
 from mce.models._base import FrozenModel
-from mce.models.market_data import BarObservation
+from mce.models.market_data import BarObservation, QuoteObservation, TradeObservation
 from mce.models.quality import SourceId
 from mce.models.time import TimestampNs
 
@@ -54,6 +54,16 @@ class MarketDataProvider(Protocol):
 @runtime_checkable
 class HistoricalMarketDataProvider(MarketDataProvider, Protocol):
     def get_bars(self, symbol: str, start_ns: int, end_ns: int) -> Sequence[BarObservation]: ...
+
+
+@runtime_checkable
+class HistoricalQuoteProvider(MarketDataProvider, Protocol):
+    def get_quotes(self, symbol: str, start_ns: int, end_ns: int) -> Sequence[QuoteObservation]: ...
+
+
+@runtime_checkable
+class HistoricalTradeProvider(MarketDataProvider, Protocol):
+    def get_trades(self, symbol: str, start_ns: int, end_ns: int) -> Sequence[TradeObservation]: ...
 
 
 @runtime_checkable

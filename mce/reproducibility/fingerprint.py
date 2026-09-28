@@ -12,6 +12,9 @@ def config_fingerprint(config: MCEConfig) -> str:
         "market": config.market,
         "provider": config.provider,
         "snapshot": config.snapshot,
+        "ingestion": config.ingestion,
+        "freshness": config.freshness,
+        "replay": config.replay,
         "reproducibility": config.reproducibility,
     }
     return sha256(canonical_json_bytes(payload)).hexdigest()

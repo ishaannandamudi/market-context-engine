@@ -22,4 +22,4 @@ jobs:
       - name: Mypy
         run: mypy
       - name: Tests
-        run: pytest
+        run: pytest --cov=mce --cov-report=term-missing --cov-fail-under=95

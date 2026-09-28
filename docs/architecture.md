@@ -4,10 +4,11 @@ MCE is a standalone U.S. market-context research engine. Its public boundary is 
 
 ## Layers
 
-1. **Provider adapters (future):** Vendor, file, or replay code implements the small protocols in `mce.providers.base` and converts source-specific records into canonical observations. Source identifiers are validated lower-case strings rather than a closed vendor enum, so adding a provider does not change the public schema. Capability metadata lets orchestration handle absent data gracefully.
-2. **Canonical observations (MCE-1):** Immutable bar, quote, and trade records carry event, effective, optional provider, and optional ingestion times. They do not calculate features.
-3. **Calendar and features (future):** Session identification and broad-market feature computation will operate on canonical inputs. No weekday or session-time shortcuts exist in this phase.
-4. **Regimes and quality (future):** Regime assignment, confidence assessment, and explanation will use available features and explicit quality flags. Unknown and unavailable remain distinct from zero.
-5. **Snapshot output (MCE-1 contract):** Frozen, versioned snapshot model with canonical JSON serialization. Any producer must enforce the causal invariant described in [time semantics](time-semantics.md).
+1. **Provider boundary:** `mce.providers.base` defines capabilities and historical/live protocols. `mce.providers.memory` is a deterministic, credential-free historical implementation. Future vendor adapters must normalize raw records before they reach downstream code. Source identifiers are validated lower-case strings rather than a closed vendor enum.
+2. **Canonical observations:** Immutable bar, quote, and trade records carry event, effective, optional provider, and optional ingestion times. Bars may carry start/end bounds; MCE-2 ingestion requires them. These models do not calculate features.
+3. **Calendar and ingestion:** `mce.calendar` wraps the XNYS schedule and classifies regular, extended, closed, and unknown time. `mce.ingestion` validates canonical batches, records explicit rejections and duplicates, and preserves suspicious off-session observations with flags.
+4. **Causal replay and quality:** `mce.replay` sorts historical observations once, advances an explicit clock, and serves as-of queries from a bounded store. `mce.quality` evaluates freshness and coarse availability/ingestion quality without calculating confidence.
+5. **Feature and regime layers (future):** Quantitative features, regimes, confidence, and explainability will consume only causally available canonical observations.
+6. **Snapshot output:** The MCE-1 frozen, versioned `MarketContextSnapshot` remains the external contract. Any producer must enforce the causal invariant in [time semantics](time-semantics.md).
 
-The protocols are deliberately narrow. Historical access defines bars; live access defines a bar stream. Later phases may add focused quote/trade protocols without bloating the base interface. No provider implementation, network request, persistence layer, or service is part of MCE-1.
+The protocols remain narrow. MCE-2 adds separate historical quote/trade protocols while retaining the MCE-1 base and bar protocol. Historical replay is synchronous; live adapters can remain async behind their protocol later. There are no network providers, database, or service endpoints.

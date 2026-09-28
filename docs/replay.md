@@ -1,0 +1,9 @@
+# Historical replay and causal store
+
+`HistoricalReplay` takes a fixed batch of canonical observations, sorts it once, and activates records only when `effective_timestamp_ns <= ReplayClock.as_of_ns`. The clock starts from an explicit integer timestamp (default zero); it never reads wall time and refuses backward movement. `reset` explicitly rebuilds the store and cursor, enabling repeatable runs. Out-of-order event input is retained and sorted, not silently discarded.
+
+The deterministic activation key is `(effective_timestamp_ns, event_timestamp_ns, source, symbol, type name, canonical JSON bytes)`. Canonical bytes include optional provider sequence and all record fields. Byte-identical trades can tie but remain separately present; their relative order is not observable in serialized values. Replay with the same data and dependency versions produces the same order and state.
+
+`CausalDataStore` indexes observations by record type, canonical symbol, and event time. `latest_bar`, `latest_quote`, `bars`, and `trades` all require explicit `as_of_ns` and filter out records with future effective time. Ranges use event time `[start_ns, end_ns)`. `latest_*` returns a real prior record with its original timestamps; it does not synthesize a value at `as_of_ns` or apply a freshness policy. Missing records return `None` or an empty tuple. A reported numeric zero is preserved.
+
+The store has a configurable global `max_observations` (default 100,000). It evicts the oldest **accepted** record on overflow; replay order makes this deterministic. Per-symbol event indexes support binary-search range location, and common in-order appends are inexpensive. Out-of-order insertion and eviction can move list elements; this is reasonable for initial broad-market minute data, not a high-frequency tick database. Historical replay itself holds the input batch in memory. There is no global singleton, database, parallel worker, or live stream correction algorithm.

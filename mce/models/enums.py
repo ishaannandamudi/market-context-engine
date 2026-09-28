@@ -71,6 +71,12 @@ class MarketSession(StrEnum):
     UNKNOWN = "unknown"
 
 
+class BarInterval(StrEnum):
+    ONE_MINUTE = "1m"
+    FIVE_MINUTES = "5m"
+    DAILY = "1d"
+
+
 class DataQuality(StrEnum):
     GOOD = "good"
     DEGRADED = "degraded"
@@ -92,6 +98,9 @@ class QualityFlag(StrEnum):
     TIMESTAMP_MISMATCH = "timestamp_mismatch"
     SOURCE_STALE = "source_stale"
     LOW_COVERAGE = "low_coverage"
+    MISSING_DATA = "missing_data"
+    REJECTED_DATA = "rejected_data"
+    OUTSIDE_SESSION = "outside_session"
 
 
 class EventRiskStatus(StrEnum):

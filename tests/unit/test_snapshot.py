@@ -28,7 +28,7 @@ from tests.fixtures.samples import EFFECTIVE_NS, sample_snapshot
 
 def test_versioning_and_missing_analytics() -> None:
     snapshot = sample_snapshot()
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"
     assert SCHEMA_VERSION == "1.0"
     assert snapshot.engine_version == __version__
     assert snapshot.schema_version == SCHEMA_VERSION
@@ -92,7 +92,7 @@ def test_complete_representative_snapshot_round_trip() -> None:
         feature_values={"available": True, "count": 3, "label": "sample", "rate": 0.2},
     )
     payload = canonical_json_str(snapshot)
-    assert '"engine_version":"0.1.0"' in payload
+    assert '"engine_version":"0.2.0"' in payload
     assert '"schema_version":"1.0"' in payload
     assert canonical_json_str(MarketContextSnapshot.model_validate_json(payload)) == payload
 
@@ -138,6 +138,13 @@ def test_snapshot_is_frozen_and_versions_validated() -> None:
         MarketContextSnapshot(as_of_ns=1, schema_version="2.0")
     with pytest.raises(ValidationError):
         MarketContextSnapshot(as_of_ns=1, engine_version="latest")
+
+
+def test_previous_engine_snapshot_remains_readable() -> None:
+    previous = MarketContextSnapshot(as_of_ns=1, engine_version="0.1.0")
+    loaded = MarketContextSnapshot.model_validate_json(canonical_json_str(previous))
+    assert loaded.engine_version == "0.1.0"
+    assert loaded.schema_version == SCHEMA_VERSION
 
 
 def test_snapshot_scalar_maps_are_copied_and_read_only() -> None:

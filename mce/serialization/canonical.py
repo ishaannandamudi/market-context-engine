@@ -1,7 +1,7 @@
 """Canonical JSON for snapshots and reproducibility hashes."""
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, time
 from enum import Enum
 from math import isfinite
 from typing import Any
@@ -19,6 +19,10 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, datetime):
         return ns_to_iso(datetime_to_ns(value))
     if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        if value.tzinfo is not None:
+            raise ValueError("canonical local time must be timezone-naive")
         return value.isoformat()
     if isinstance(value, dict):
         if not all(isinstance(key, str) for key in value):
