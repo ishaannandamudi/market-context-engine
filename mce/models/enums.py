@@ -101,6 +101,9 @@ class QualityFlag(StrEnum):
     MISSING_DATA = "missing_data"
     REJECTED_DATA = "rejected_data"
     OUTSIDE_SESSION = "outside_session"
+    INSUFFICIENT_WINDOW_COVERAGE = "insufficient_window_coverage"
+    HORIZON_DISAGREEMENT = "horizon_disagreement"
+    INDEX_DISAGREEMENT = "index_disagreement"
 
 
 class EventRiskStatus(StrEnum):

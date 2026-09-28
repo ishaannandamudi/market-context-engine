@@ -2,15 +2,17 @@
 
 from collections.abc import Mapping
 from datetime import date, time
+from math import isfinite
 from types import MappingProxyType
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from mce.features.windows import WindowSpec, WindowUnit
 from mce.models.enums import BarInterval
 from mce.models.quality import SourceId
-from mce.models.symbol import Symbol
+from mce.models.symbol import Symbol, normalize_symbol
 
 
 class SettingsSection(BaseModel):
@@ -86,6 +88,81 @@ class ReplaySettings(SettingsSection):
     max_observations: int = Field(default=100_000, gt=0)
 
 
+def _default_horizons() -> tuple[WindowSpec, ...]:
+    return (
+        WindowSpec(name="1m", unit=WindowUnit.ELAPSED, length=60_000_000_000),
+        WindowSpec(name="5m", unit=WindowUnit.ELAPSED, length=300_000_000_000),
+        WindowSpec(name="15m", unit=WindowUnit.ELAPSED, length=900_000_000_000),
+        WindowSpec(name="30m", unit=WindowUnit.ELAPSED, length=1_800_000_000_000),
+        WindowSpec(name="1h", unit=WindowUnit.ELAPSED, length=3_600_000_000_000),
+        WindowSpec(name="session", unit=WindowUnit.SESSION, length=1),
+        WindowSpec(name="1d", unit=WindowUnit.TRADING_DAYS, length=1),
+        WindowSpec(name="5d", unit=WindowUnit.TRADING_DAYS, length=5),
+    )
+
+
+class TrendScoreWeights(SettingsSection):
+    returns: float = Field(default=0.40, ge=0, le=1, allow_inf_nan=False)
+    slope: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    persistence: float = Field(default=0.15, ge=0, le=1, allow_inf_nan=False)
+    acceleration: float = Field(default=0.10, ge=0, le=1, allow_inf_nan=False)
+    distance: float = Field(default=0.10, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "TrendScoreWeights":
+        if (
+            abs(
+                sum((self.returns, self.slope, self.persistence, self.acceleration, self.distance))
+                - 1
+            )
+            > 1e-9
+        ):
+            raise ValueError("trend score weights must sum to 1")
+        return self
+
+
+class TrendSettings(SettingsSection):
+    enabled: bool = True
+    horizons: tuple[WindowSpec, ...] = Field(default_factory=_default_horizons)
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    short_slope_window_ns: int = Field(default=300_000_000_000, gt=0)
+    long_slope_window_ns: int = Field(default=1_800_000_000_000, gt=0)
+    min_regression_samples: int = Field(default=3, ge=3)
+    minimum_window_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_market_coverage: float = Field(default=0.67, gt=0, le=1, allow_inf_nan=False)
+    return_scale: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+    slope_scale_per_hour: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+    acceleration_scale_per_hour: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+    score_weights: TrendScoreWeights = Field(default_factory=TrendScoreWeights)
+    index_weights: Mapping[str, float] = Field(default_factory=dict)
+
+    @field_serializer("index_weights")
+    def serialize_index_weights(self, weights: Mapping[str, float]) -> dict[str, float]:
+        return dict(weights)
+
+    @model_validator(mode="after")
+    def validate_trend(self) -> "TrendSettings":
+        names = [h.name for h in self.horizons]
+        if not names or len(names) != len(set(names)):
+            raise ValueError("trend horizon names must be nonempty and unique")
+        if self.short_slope_window_ns >= self.long_slope_window_ns:
+            raise ValueError("short slope window must be shorter than long slope window")
+        normalized_weights: dict[str, float] = {}
+        for name, weight in self.index_weights.items():
+            symbol = normalize_symbol(name)
+            if weight <= 0 or not isfinite(weight):
+                raise ValueError("index weights must be positive finite values")
+            if symbol in normalized_weights:
+                raise ValueError("index weight symbols must be unique")
+            normalized_weights[symbol] = weight
+        object.__setattr__(self, "index_weights", MappingProxyType(normalized_weights))
+        return self
+
+
+class FeatureSettings(SettingsSection):
+    trend: TrendSettings = Field(default_factory=TrendSettings)
+
+
 class ReproducibilitySettings(SettingsSection):
     seed: int | None = Field(default=None, ge=0)
 
@@ -104,4 +181,5 @@ class MCEConfig(BaseSettings):
     ingestion: IngestionSettings = Field(default_factory=IngestionSettings)
     freshness: FreshnessSettings = Field(default_factory=FreshnessSettings)
     replay: ReplaySettings = Field(default_factory=ReplaySettings)
+    features: FeatureSettings = Field(default_factory=FeatureSettings)
     reproducibility: ReproducibilitySettings = Field(default_factory=ReproducibilitySettings)

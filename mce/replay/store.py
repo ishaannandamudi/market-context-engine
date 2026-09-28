@@ -2,6 +2,7 @@
 
 from bisect import bisect_left
 from collections import deque
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TypeAlias, TypeVar, cast
 
@@ -142,6 +143,16 @@ class CausalDataStore:
     def latest_bar(self, symbol: str, as_of_ns: int) -> BarObservation | None:
         result = self._latest(BarObservation, symbol, as_of_ns)
         return result if isinstance(result, BarObservation) else None
+
+    def bars_reverse(self, symbol: str, as_of_ns: int) -> Iterator[BarObservation]:
+        """Iterate available bars newest event first without copying the bucket."""
+        if as_of_ns < 0:
+            raise ValueError("as_of_ns must be nonnegative")
+        bucket = self._buckets.get((BarObservation, normalize_symbol(symbol)))
+        if bucket is not None:
+            for item in reversed(bucket.observations):
+                if item.effective_timestamp_ns <= as_of_ns:
+                    yield cast(BarObservation, item)
 
     def latest_quote(self, symbol: str, as_of_ns: int) -> QuoteObservation | None:
         result = self._latest(QuoteObservation, symbol, as_of_ns)

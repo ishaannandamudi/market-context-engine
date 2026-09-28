@@ -28,7 +28,7 @@ from tests.fixtures.samples import EFFECTIVE_NS, sample_snapshot
 
 def test_versioning_and_missing_analytics() -> None:
     snapshot = sample_snapshot()
-    assert __version__ == "0.2.0"
+    assert __version__ == "0.3.0"
     assert SCHEMA_VERSION == "1.0"
     assert snapshot.engine_version == __version__
     assert snapshot.schema_version == SCHEMA_VERSION
@@ -92,7 +92,7 @@ def test_complete_representative_snapshot_round_trip() -> None:
         feature_values={"available": True, "count": 3, "label": "sample", "rate": 0.2},
     )
     payload = canonical_json_str(snapshot)
-    assert '"engine_version":"0.2.0"' in payload
+    assert '"engine_version":"0.3.0"' in payload
     assert '"schema_version":"1.0"' in payload
     assert canonical_json_str(MarketContextSnapshot.model_validate_json(payload)) == payload
 
@@ -145,6 +145,11 @@ def test_previous_engine_snapshot_remains_readable() -> None:
     loaded = MarketContextSnapshot.model_validate_json(canonical_json_str(previous))
     assert loaded.engine_version == "0.1.0"
     assert loaded.schema_version == SCHEMA_VERSION
+    mce_two = MarketContextSnapshot(as_of_ns=1, engine_version="0.2.0")
+    assert (
+        MarketContextSnapshot.model_validate_json(canonical_json_str(mce_two)).engine_version
+        == "0.2.0"
+    )
 
 
 def test_snapshot_scalar_maps_are_copied_and_read_only() -> None:
