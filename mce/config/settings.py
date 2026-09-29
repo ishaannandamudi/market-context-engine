@@ -501,6 +501,98 @@ class DispersionSettings(SettingsSection):
         return self
 
 
+class LiquidityScoreWeights(SettingsSection):
+    illiquidity: float = Field(default=0.45, ge=0, le=1, allow_inf_nan=False)
+    relative_volume: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    quoted_spread: float = Field(default=0.20, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "LiquidityScoreWeights":
+        if abs(self.illiquidity + self.relative_volume + self.quoted_spread - 1) > 1e-9:
+            raise ValueError("liquidity score weights must sum to one")
+        return self
+
+
+class LiquiditySettings(SettingsSection):
+    enabled: bool = True
+    universe: tuple[Symbol, ...] = ()
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    historical_sessions: int = Field(default=20, ge=1)
+    minimum_history_samples: int = Field(default=5, ge=1)
+    minimum_members: int = Field(default=3, ge=2)
+    minimum_member_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_weight_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_quote_coverage: float = Field(default=0.5, gt=0, le=1, allow_inf_nan=False)
+    minimum_score_components: int = Field(default=2, ge=1, le=3)
+    quote_spread_enabled: bool = True
+    amihud_enabled: bool = True
+    spread_scale: float = Field(default=0.001, gt=0, allow_inf_nan=False)
+    large_move_threshold: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+    weak_volume_rvol_threshold: float = Field(default=0.75, ge=0, allow_inf_nan=False)
+    high_volume_rvol_threshold: float = Field(default=2.0, gt=0, allow_inf_nan=False)
+    price_adjustment_status: Literal["adjusted", "raw", "unknown"] = "unknown"
+    score_weights: LiquidityScoreWeights = Field(default_factory=LiquidityScoreWeights)
+
+    @model_validator(mode="after")
+    def validate_liquidity(self) -> "LiquiditySettings":
+        if len(self.universe) != len(set(self.universe)):
+            raise ValueError("liquidity universe symbols must be unique")
+        if self.minimum_history_samples > self.historical_sessions:
+            raise ValueError("liquidity minimum history exceeds the baseline")
+        if self.weak_volume_rvol_threshold >= self.high_volume_rvol_threshold:
+            raise ValueError("weak volume threshold must be below high volume threshold")
+        return self
+
+
+class StressScoreWeights(SettingsSection):
+    volatility: float = Field(default=0.22, ge=0, le=1, allow_inf_nan=False)
+    correlation: float = Field(default=0.17, ge=0, le=1, allow_inf_nan=False)
+    breadth: float = Field(default=0.20, ge=0, le=1, allow_inf_nan=False)
+    liquidity: float = Field(default=0.18, ge=0, le=1, allow_inf_nan=False)
+    gap: float = Field(default=0.13, ge=0, le=1, allow_inf_nan=False)
+    dispersion: float = Field(default=0.06, ge=0, le=1, allow_inf_nan=False)
+    sector: float = Field(default=0.04, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "StressScoreWeights":
+        if (
+            abs(
+                sum(
+                    (
+                        self.volatility,
+                        self.correlation,
+                        self.breadth,
+                        self.liquidity,
+                        self.gap,
+                        self.dispersion,
+                        self.sector,
+                    )
+                )
+                - 1
+            )
+            > 1e-9
+        ):
+            raise ValueError("stress score weights must sum to one")
+        return self
+
+
+class StressSettings(SettingsSection):
+    enabled: bool = True
+    minimum_context_components: int = Field(default=2, ge=1, le=7)
+    historical_baseline_observations: int = Field(default=20, ge=1)
+    minimum_history_samples: int = Field(default=5, ge=1)
+    persistence_observations: int = Field(default=5, ge=2)
+    gap_scale: float = Field(default=0.02, gt=0, allow_inf_nan=False)
+    stress_breadth_threshold: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    score_weights: StressScoreWeights = Field(default_factory=StressScoreWeights)
+
+    @model_validator(mode="after")
+    def validate_stress(self) -> "StressSettings":
+        if self.minimum_history_samples > self.historical_baseline_observations:
+            raise ValueError("stress minimum history exceeds the baseline")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
@@ -508,6 +600,8 @@ class FeatureSettings(SettingsSection):
     sectors: SectorSettings = Field(default_factory=SectorSettings)
     correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
+    liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
+    stress: StressSettings = Field(default_factory=StressSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
