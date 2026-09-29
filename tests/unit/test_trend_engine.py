@@ -339,7 +339,7 @@ def test_snapshot_projection_roundtrip_and_preservation(calendar: MarketSessionS
     upgraded = apply_trend_to_snapshot(
         result, MarketContextSnapshot(as_of_ns=as_of, engine_version="0.2.0")
     )
-    assert upgraded.engine_version == "0.5.0"
+    assert upgraded.engine_version == "0.6.0"
 
 
 def test_feature_result_rejects_inconsistent_counts_or_clock(

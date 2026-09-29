@@ -7,12 +7,20 @@ from re import fullmatch
 from types import MappingProxyType
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mce.features.windows import WindowSpec, WindowUnit
 from mce.models.enums import BarInterval
 from mce.models.quality import SourceId
+from mce.models.sector import SectorName, normalize_sector
 from mce.models.symbol import Symbol, normalize_symbol
 
 
@@ -272,10 +280,124 @@ class BreadthSettings(SettingsSection):
         return self
 
 
+class SectorScoreWeights(SettingsSection):
+    short_relative: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    medium_relative: float = Field(default=0.30, ge=0, le=1, allow_inf_nan=False)
+    long_relative: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    breadth_confirmation: float = Field(default=0.10, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "SectorScoreWeights":
+        if self.short_relative + self.medium_relative + self.long_relative <= 0:
+            raise ValueError("sector relative score needs positive return weight")
+        if (
+            abs(
+                self.short_relative
+                + self.medium_relative
+                + self.long_relative
+                + self.breadth_confirmation
+                - 1
+            )
+            > 1e-9
+        ):
+            raise ValueError("sector score weights must sum to 1")
+        return self
+
+
+class SectorSettings(SettingsSection):
+    enabled: bool = True
+    groups: Mapping[SectorName, tuple[Symbol, ...]] = Field(default_factory=dict)
+    exclusive_membership: bool = True
+    proxy_mapping: Mapping[SectorName, Symbol] = Field(default_factory=dict)
+    reference_symbol: Symbol = "SPY"
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    minimum_member_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_weight_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_member_count: int = Field(default=3, gt=0)
+    minimum_valid_sectors: int = Field(default=2, ge=2)
+    short_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(name="session", unit=WindowUnit.SESSION, length=1)
+    )
+    medium_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(name="1d", unit=WindowUnit.TRADING_DAYS, length=1)
+    )
+    long_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(name="5d", unit=WindowUnit.TRADING_DAYS, length=5)
+    )
+    additional_horizons: tuple[WindowSpec, ...] = (
+        WindowSpec(name="5m", unit=WindowUnit.ELAPSED, length=300_000_000_000),
+        WindowSpec(name="30m", unit=WindowUnit.ELAPSED, length=1_800_000_000_000),
+        WindowSpec(name="20d", unit=WindowUnit.TRADING_DAYS, length=20),
+    )
+    return_scale: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+    score_weights: SectorScoreWeights = Field(default_factory=SectorScoreWeights)
+    breadth_reference_sessions: tuple[int, int, int] = (5, 20, 60)
+    volatility_windows_sessions: tuple[int, int, int] = (5, 20, 60)
+    volatility_baseline_sessions: int = Field(default=20, gt=0)
+    minimum_volatility_baseline_samples: int = Field(default=10, gt=0)
+    persistence_window_sessions: int = Field(default=5, gt=1)
+    rotation_window_sessions: int = Field(default=3, gt=0)
+    price_adjustment_status: Literal["adjusted", "raw", "unknown"] = "unknown"
+
+    @field_validator("groups", "proxy_mapping", mode="before")
+    @classmethod
+    def reject_duplicate_names(cls, value: object) -> object:
+        if isinstance(value, Mapping):
+            names = [normalize_sector(name) for name in value]
+            if len(names) != len(set(names)):
+                raise ValueError("sector names must be unique after normalization")
+        return value
+
+    @field_serializer("groups", "proxy_mapping")
+    def serialize_maps(self, value: Mapping[str, object]) -> dict[str, object]:
+        return dict(value)
+
+    @model_validator(mode="after")
+    def validate_sectors(self) -> "SectorSettings":
+        names = (
+            self.short_horizon.name,
+            self.medium_horizon.name,
+            self.long_horizon.name,
+            *(item.name for item in self.additional_horizons),
+        )
+        if len(names) != len(set(names)):
+            raise ValueError("sector horizons must have unique names")
+        if (
+            any(
+                not 0 < a < b < c
+                for a, b, c in (self.breadth_reference_sessions, self.volatility_windows_sessions)
+            )
+            or self.volatility_windows_sessions[0] < 2
+        ):
+            raise ValueError("sector reference and volatility windows must increase")
+        if self.minimum_volatility_baseline_samples > self.volatility_baseline_sessions:
+            raise ValueError("minimum sector volatility baseline exceeds its window")
+        groups: dict[str, tuple[str, ...]] = {}
+        for name, symbols in self.groups.items():
+            canonical = normalize_sector(name)
+            if canonical in groups or len(symbols) != len(set(symbols)):
+                raise ValueError("sector groups must have unique names and symbols")
+            groups[canonical] = tuple(sorted(symbols))
+        if self.exclusive_membership:
+            all_symbols = [symbol for symbols in groups.values() for symbol in symbols]
+            if len(all_symbols) != len(set(all_symbols)):
+                raise ValueError("exclusive sector groups cannot share symbols")
+        proxies: dict[str, str] = {}
+        for name, symbol in self.proxy_mapping.items():
+            canonical = normalize_sector(name)
+            if canonical in proxies:
+                raise ValueError("sector proxy names must be unique")
+            proxies[canonical] = symbol
+        object.__setattr__(self, "groups", MappingProxyType(dict(sorted(groups.items()))))
+        object.__setattr__(self, "proxy_mapping", MappingProxyType(dict(sorted(proxies.items()))))
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
     breadth: BreadthSettings = Field(default_factory=BreadthSettings)
+    sectors: SectorSettings = Field(default_factory=SectorSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
