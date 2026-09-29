@@ -393,11 +393,63 @@ class SectorSettings(SettingsSection):
         return self
 
 
+class CorrelationScoreWeights(SettingsSection):
+    average: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    market_mode: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "CorrelationScoreWeights":
+        if abs(self.average + self.market_mode - 1) > 1e-9:
+            raise ValueError("correlation score weights must sum to 1")
+        return self
+
+
+class CorrelationSettings(SettingsSection):
+    enabled: bool = True
+    universe: tuple[Symbol, ...] = ()
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    short_window_bars: int = Field(default=30, ge=3)
+    medium_window_bars: int = Field(default=60, ge=3)
+    long_window_bars: int = Field(default=120, ge=3)
+    daily_horizons_sessions: tuple[int, ...] = ()
+    minimum_symbols: int = Field(default=3, ge=2)
+    minimum_aligned_samples: int = Field(default=8, ge=3)
+    minimum_symbol_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_time_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    historical_baseline_sessions: int = Field(default=20, ge=0)
+    minimum_baseline_samples: int = Field(default=10, ge=1)
+    shrinkage_strength: float = Field(default=0.1, ge=0, le=1, allow_inf_nan=False)
+    robust_estimator_enabled: bool = True
+    clustering_enabled: bool = True
+    cluster_correlation_threshold: float = Field(default=0.7, ge=-1, le=1, allow_inf_nan=False)
+    score_weights: CorrelationScoreWeights = Field(default_factory=CorrelationScoreWeights)
+
+    @model_validator(mode="after")
+    def validate_correlation(self) -> "CorrelationSettings":
+        if not self.short_window_bars < self.medium_window_bars < self.long_window_bars:
+            raise ValueError("correlation windows must increase strictly")
+        if self.minimum_aligned_samples > self.short_window_bars:
+            raise ValueError("minimum aligned samples exceeds short window")
+        if (
+            self.minimum_baseline_samples > self.historical_baseline_sessions
+            and self.historical_baseline_sessions
+        ):
+            raise ValueError("minimum baseline samples exceeds baseline sessions")
+        if len(self.universe) != len(set(self.universe)):
+            raise ValueError("correlation universe symbols must be unique")
+        if len(set(self.daily_horizons_sessions)) != len(self.daily_horizons_sessions) or any(
+            sessions < self.minimum_aligned_samples for sessions in self.daily_horizons_sessions
+        ):
+            raise ValueError("daily horizons must be unique and meet the minimum sample size")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
     breadth: BreadthSettings = Field(default_factory=BreadthSettings)
     sectors: SectorSettings = Field(default_factory=SectorSettings)
+    correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
