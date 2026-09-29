@@ -2,15 +2,15 @@
 
 Market Context Engine (MCE) is a standalone research analytics project for broad U.S. equity-market context. It is designed to produce a typed, versioned `MarketContextSnapshot` that downstream research systems can consume. MCE is research analytics software. It does not execute trades.
 
-**Current phase:** MCE-4, advanced realized volatility (`0.4.0`). MCE classifies NYSE trading sessions, ingests canonical observations, replays fixed historical data with an explicit clock, and computes completed-bar trend and realized-volatility context. It describes observed volatility; it does not forecast future volatility or classify regimes.
+**Current phase:** MCE-5, advanced market breadth (`0.5.0`). MCE classifies NYSE trading sessions, replays canonical observations with an explicit clock, and computes trend, realized volatility, and constituent participation. Breadth uses point-in-time membership and causal regular-session prices. MCE does not forecast or classify regimes.
 
 ## Design
 
-Provider adapters translate source-specific data into canonical bars, quotes, and trades. MCE includes a deterministic in-memory historical reference provider and an XNYS exchange-calendar adapter. Trend and realized-volatility engines read the causal store only; their typed results can be projected into existing snapshot fields. Later phases will add other features and regime assessment. The snapshot is the integration boundary for Axiom Microstructure Engine (AME), which handles its own microstructure and execution research. A separate options engine may later supply options-derived context; MCE does not price options.
+Provider adapters translate source-specific data into canonical bars, quotes, and trades. MCE includes deterministic in-memory historical data and membership providers and an XNYS exchange-calendar adapter. Trend, realized-volatility, and breadth engines read the causal store only; their typed results can be projected into existing snapshot fields. Later phases will add other features and regime assessment. The snapshot is the integration boundary for Axiom Microstructure Engine (AME), which handles its own microstructure and execution research. A separate options engine may later supply options-derived context; MCE does not price options.
 
 MCE uses UTC nanosecond timestamps internally and reserves U.S. Eastern Time for exchange-session interpretation and display. Every snapshot at time `T` must depend only on information effectively available by `T`. Unavailable analytics are `null`, never fabricated zeros.
 
-See [architecture](docs/architecture.md), [data model](docs/data-model.md), [time semantics](docs/time-semantics.md), [calendar](docs/market-calendar.md), [ingestion](docs/ingestion.md), [replay](docs/replay.md), [feature windows](docs/features.md), [trend formulas](docs/trend-engine.md), [volatility formulas](docs/volatility-engine.md), [freshness and quality](docs/freshness-quality.md), and [development](docs/development.md).
+See [architecture](docs/architecture.md), [data model](docs/data-model.md), [time semantics](docs/time-semantics.md), [calendar](docs/market-calendar.md), [ingestion](docs/ingestion.md), [replay](docs/replay.md), [feature windows](docs/features.md), [trend formulas](docs/trend-engine.md), [volatility formulas](docs/volatility-engine.md), [breadth formulas](docs/breadth-engine.md), [freshness and quality](docs/freshness-quality.md), and [development](docs/development.md).
 
 ## Install and verify
 
@@ -28,4 +28,4 @@ Python 3.11 or newer is required. No API keys or credentials are needed. Configu
 
 ## Roadmap boundary
 
-MCE-4 adds close-to-close, range, Yang–Zhang, intraday realized and bipower variation, semivariance, and causal volatility context to the MCE-3 trend foundation. Market breadth and regime classification remain later work. Real vendor adapters, Parquet I/O, late-arrival live-feed handling, confidence modeling, persistent storage, and a local service also remain later work. MCE does not provide volatility forecasts, brokerage integration, order routing, position management, stock selection, options valuation, or real-money trading.
+MCE-5 adds point-in-time constituent membership, advance/decline participation, rolling reference participation, equal and weighted returns, breadth history, and contribution concentration to the trend and volatility foundation. Sector analytics and regime classification remain later work. Real vendor adapters, historical constituent feeds, corporate-action ingestion, Parquet I/O, late-arrival live-feed handling, confidence modeling, persistent storage, and a local service also remain later work. MCE does not provide forecasts, brokerage integration, order routing, position management, stock selection, options valuation, or real-money trading.

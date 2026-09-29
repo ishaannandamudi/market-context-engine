@@ -227,9 +227,55 @@ class VolatilitySettings(SettingsSection):
         return self
 
 
+class BreadthScoreWeights(SettingsSection):
+    net_advance: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    short_reference: float = Field(default=0.2, ge=0, le=1, allow_inf_nan=False)
+    medium_reference: float = Field(default=0.2, ge=0, le=1, allow_inf_nan=False)
+    long_reference: float = Field(default=0.1, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "BreadthScoreWeights":
+        if (
+            abs(
+                self.net_advance
+                + self.short_reference
+                + self.medium_reference
+                + self.long_reference
+                - 1
+            )
+            > 1e-9
+        ):
+            raise ValueError("breadth score weights must sum to 1")
+        return self
+
+
+class BreadthSettings(SettingsSection):
+    enabled: bool = True
+    minimum_member_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_weight_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    unchanged_return_tolerance: float = Field(default=1e-8, ge=0, le=1, allow_inf_nan=False)
+    reference_windows_sessions: tuple[int, int, int] = (5, 20, 60)
+    new_high_low_window_sessions: int = Field(default=20, gt=0)
+    momentum_short_window: int = Field(default=3, gt=0)
+    momentum_long_window: int = Field(default=10, gt=0)
+    index_proxy_symbol: Symbol | None = "SPY"
+    price_adjustment_status: Literal["adjusted", "raw", "unknown"] = "unknown"
+    score_weights: BreadthScoreWeights = Field(default_factory=BreadthScoreWeights)
+
+    @model_validator(mode="after")
+    def validate_breadth(self) -> "BreadthSettings":
+        short, medium, long = self.reference_windows_sessions
+        if not 0 < short < medium < long:
+            raise ValueError("breadth reference windows must increase strictly")
+        if self.momentum_short_window >= self.momentum_long_window:
+            raise ValueError("breadth momentum short window must precede long window")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
+    breadth: BreadthSettings = Field(default_factory=BreadthSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
