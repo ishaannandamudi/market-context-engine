@@ -593,6 +593,76 @@ class StressSettings(SettingsSection):
         return self
 
 
+REGIME_RULE_IDS = (
+    "regime.systemic_stress",
+    "regime.liquidity_stress",
+    "regime.transitional",
+    "regime.risk_off",
+    "regime.risk_on",
+    "regime.rotation",
+    "regime.range_bound",
+    "regime.mixed",
+)
+
+
+class RegimeSettings(SettingsSection):
+    enabled: bool = True
+    minimum_required_families: int = Field(default=4, ge=3, le=8)
+    minimum_evidence_quality: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    minimum_evidence_strength: float = Field(default=0.2, ge=0, le=1, allow_inf_nan=False)
+    direction_entry: float = Field(default=0.35, gt=0, le=1, allow_inf_nan=False)
+    direction_exit: float = Field(default=0.2, ge=0, lt=1, allow_inf_nan=False)
+    trend_confirmation: float = Field(default=0.3, gt=0, le=1, allow_inf_nan=False)
+    trend_strong: float = Field(default=0.7, gt=0, le=1, allow_inf_nan=False)
+    breadth_confirmation: float = Field(default=0.15, ge=0, le=1, allow_inf_nan=False)
+    breadth_conflict: float = Field(default=0.45, gt=0, le=1, allow_inf_nan=False)
+    volatility_low: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    volatility_high: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
+    volatility_extreme: float = Field(default=0.9, ge=0, le=1, allow_inf_nan=False)
+    liquidity_stressed: float = Field(default=0.2, ge=0, le=1, allow_inf_nan=False)
+    liquidity_degraded: float = Field(default=0.45, ge=0, le=1, allow_inf_nan=False)
+    liquidity_healthy: float = Field(default=0.75, ge=0, le=1, allow_inf_nan=False)
+    correlation_low: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    correlation_high: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
+    correlation_systemic: float = Field(default=0.9, ge=0, le=1, allow_inf_nan=False)
+    dispersion_low: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    dispersion_high: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
+    dispersion_extreme: float = Field(default=0.9, ge=0, le=1, allow_inf_nan=False)
+    stress_elevated: float = Field(default=0.3, ge=0, le=1, allow_inf_nan=False)
+    stress_high: float = Field(default=0.65, ge=0, le=1, allow_inf_nan=False)
+    stress_systemic: float = Field(default=0.85, ge=0, le=1, allow_inf_nan=False)
+    systemic_member_fraction: float = Field(default=0.6, ge=0, le=1, allow_inf_nan=False)
+    rotation_active: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
+    rotation_stable: float = Field(default=0.4, ge=0, le=1, allow_inf_nan=False)
+    conflict_override_severity: float = Field(default=0.8, ge=0, le=1, allow_inf_nan=False)
+    hysteresis_band: float = Field(default=0.08, ge=0, le=0.15, allow_inf_nan=False)
+    precedence: tuple[str, ...] = REGIME_RULE_IDS
+
+    @model_validator(mode="after")
+    def validate_regime(self) -> "RegimeSettings":
+        ordered = (
+            (self.volatility_low, self.volatility_high, self.volatility_extreme),
+            (self.liquidity_stressed, self.liquidity_degraded, self.liquidity_healthy),
+            (self.correlation_low, self.correlation_high, self.correlation_systemic),
+            (self.dispersion_low, self.dispersion_high, self.dispersion_extreme),
+            (self.stress_elevated, self.stress_high, self.stress_systemic),
+            (self.rotation_stable, self.rotation_active),
+        )
+        if any(any(a >= b for a, b in zip(group, group[1:], strict=False)) for group in ordered):
+            raise ValueError("regime dimension thresholds must increase strictly")
+        if self.direction_exit >= self.direction_entry:
+            raise ValueError("direction exit must be below entry")
+        if self.trend_confirmation >= self.trend_strong:
+            raise ValueError("strong trend threshold must exceed confirmation")
+        if self.breadth_confirmation >= self.breadth_conflict:
+            raise ValueError("breadth confirmation must be below conflict")
+        if len(self.precedence) != len(REGIME_RULE_IDS) or set(self.precedence) != set(
+            REGIME_RULE_IDS
+        ):
+            raise ValueError("regime precedence must contain each stable rule ID once")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
@@ -602,6 +672,7 @@ class FeatureSettings(SettingsSection):
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)
+    regime: RegimeSettings = Field(default_factory=RegimeSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
