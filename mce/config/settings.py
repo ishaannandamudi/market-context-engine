@@ -663,6 +663,58 @@ class RegimeSettings(SettingsSection):
         return self
 
 
+class RegimeTransitionStabilityWeights(SettingsSection):
+    dwell: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    headline_churn: float = Field(default=0.30, ge=0, le=1, allow_inf_nan=False)
+    dimension_churn: float = Field(default=0.20, ge=0, le=1, allow_inf_nan=False)
+    oscillation: float = Field(default=0.15, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "RegimeTransitionStabilityWeights":
+        if (
+            abs(sum((self.dwell, self.headline_churn, self.dimension_churn, self.oscillation)) - 1)
+            > 1e-9
+        ):
+            raise ValueError("regime transition stability weights must sum to one")
+        return self
+
+
+class RegimeTransitionSettings(SettingsSection):
+    enabled: bool = True
+    recent_windows_sessions: tuple[int, ...] = (1, 5, 20, 60)
+    primary_window_sessions: int = Field(default=20, ge=1)
+    minimum_observations: int = Field(default=5, ge=2)
+    minimum_sessions: int = Field(default=2, ge=1)
+    minimum_completed_episodes: int = Field(default=2, ge=1)
+    maximum_gap_trading_ns: int = Field(default=46_800_000_000_000, gt=0)
+    minimum_time_coverage: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    maximum_unknown_fraction: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    minimum_usable_quality_fraction: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    reversal_window_sessions: float = Field(default=2, gt=0, allow_inf_nan=False)
+    churn_saturation_per_session: float = Field(default=2, gt=0, allow_inf_nan=False)
+    max_recent_transitions: int = Field(default=12, ge=1, le=100)
+    stability_weights: RegimeTransitionStabilityWeights = Field(
+        default_factory=RegimeTransitionStabilityWeights
+    )
+
+    @model_validator(mode="after")
+    def validate_transition(self) -> "RegimeTransitionSettings":
+        windows = self.recent_windows_sessions
+        if (
+            not windows
+            or any(value < 1 for value in windows)
+            or tuple(sorted(set(windows))) != windows
+        ):
+            raise ValueError(
+                "recent regime transition windows must be positive, sorted, and unique"
+            )
+        if self.primary_window_sessions not in windows:
+            raise ValueError("primary regime transition window must be a recent window")
+        if self.minimum_sessions > self.primary_window_sessions:
+            raise ValueError("minimum sessions cannot exceed the primary window")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
@@ -673,6 +725,7 @@ class FeatureSettings(SettingsSection):
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)
     regime: RegimeSettings = Field(default_factory=RegimeSettings)
+    regime_transition: RegimeTransitionSettings = Field(default_factory=RegimeTransitionSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
