@@ -732,6 +732,25 @@ class ReproducibilitySettings(SettingsSection):
     seed: int | None = Field(default=None, ge=0)
 
 
+class StatisticalSplitSettings(SettingsSection):
+    train_sessions: int = Field(default=60, ge=1)
+    validation_sessions: int = Field(default=20, ge=1)
+    test_sessions: int = Field(default=20, ge=1)
+    embargo_sessions: int = Field(default=1, ge=0)
+    step_sessions: int = Field(default=20, ge=1)
+    mode: Literal["expanding", "rolling"] = "expanding"
+
+
+class StatisticalSettings(SettingsSection):
+    enabled: bool = False
+    feature_set: Literal["1.0"] = "1.0"
+    normalization: Literal["schema", "none", "standard", "robust"] = "schema"
+    quality_policy: Literal["reject_unusable", "reject_poor", "include"] = "reject_unusable"
+    split: StatisticalSplitSettings = Field(default_factory=StatisticalSplitSettings)
+    state_count: int = Field(default=3, ge=2, le=6)
+    random_seed: int = Field(default=0, ge=0)
+
+
 class MCEConfig(BaseSettings):
     """Environment variables use MCE_<SECTION>__<FIELD> names."""
 
@@ -747,4 +766,5 @@ class MCEConfig(BaseSettings):
     freshness: FreshnessSettings = Field(default_factory=FreshnessSettings)
     replay: ReplaySettings = Field(default_factory=ReplaySettings)
     features: FeatureSettings = Field(default_factory=FeatureSettings)
+    statistical: StatisticalSettings = Field(default_factory=StatisticalSettings)
     reproducibility: ReproducibilitySettings = Field(default_factory=ReproducibilitySettings)

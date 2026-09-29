@@ -47,3 +47,7 @@ Typed per-symbol results expose raw intraday realized/bipower variation and semi
 ## Regime transitions and stability (MCE-11)
 
 `RegimeTransitionAnalyticsEngine` reads explicit MCE-10 regime history, sorted and indexed by observation time. It counts observed headline and dimension changes, completed dwell episodes, retrospective exit frequencies, duration-weighted occupancy, churn, reversals, synchronized changes, and temporal stability over configurable XNYS trading-session windows. Gaps and inadequate history withhold derived stability instead of creating false certainty. The optional projection adds `regime_transition.*` values without changing the MCE-10 headline. See [regime transition engine](regime-transition-engine.md) for exact formulas, units, quality gates, and the distinction between historical frequency and prediction.
+
+## Statistical preparation (MCE-12)
+
+`mce.statistical` defines an 18-feature ordered schema, constructs causal point-in-time rows from completed context snapshots, retains optional missingness and upstream quality, fits median imputation/scaling only on explicit training rows, and creates XNYS session-based walk-forward splits with embargo. Latent-state profiles, canonical label ordering and descriptive evaluation are separate from MCE-10 deterministic regime fields. No HMM is fitted or projected. See [statistical regime modeling](statistical-regime-modeling.md) for the schema, formulas, leakage boundaries and HMM preparation.

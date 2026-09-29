@@ -16,6 +16,7 @@ def config_fingerprint(config: MCEConfig) -> str:
         "freshness": config.freshness,
         "replay": config.replay,
         "features": config.features,
+        "statistical": config.statistical,
         "reproducibility": config.reproducibility,
     }
     return sha256(canonical_json_bytes(payload)).hexdigest()
