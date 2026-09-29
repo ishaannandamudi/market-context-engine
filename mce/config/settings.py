@@ -444,12 +444,70 @@ class CorrelationSettings(SettingsSection):
         return self
 
 
+class DispersionSettings(SettingsSection):
+    enabled: bool = True
+    universe: tuple[Symbol, ...] = ()
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    short_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(
+            name="5m", unit=WindowUnit.ELAPSED, length=300_000_000_000
+        )
+    )
+    medium_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(
+            name="30m", unit=WindowUnit.ELAPSED, length=1_800_000_000_000
+        )
+    )
+    long_horizon: WindowSpec = Field(
+        default_factory=lambda: WindowSpec(name="1d", unit=WindowUnit.TRADING_DAYS, length=1)
+    )
+    additional_horizons: tuple[WindowSpec, ...] = (
+        WindowSpec(name="session", unit=WindowUnit.SESSION, length=1),
+        WindowSpec(name="5d", unit=WindowUnit.TRADING_DAYS, length=5),
+        WindowSpec(name="20d", unit=WindowUnit.TRADING_DAYS, length=20),
+    )
+    minimum_members: int = Field(default=3, ge=2)
+    minimum_member_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_weight_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_sector_count: int = Field(default=2, ge=2)
+    minimum_sector_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_volatility_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    historical_baseline_sessions: int = Field(default=20, ge=0)
+    minimum_baseline_samples: int = Field(default=10, ge=1)
+    persistence_observations: int = Field(default=5, ge=2)
+    tail_quantiles: tuple[float, float] = (0.1, 0.9)
+    price_adjustment_status: Literal["adjusted", "raw", "unknown"] = "unknown"
+
+    @model_validator(mode="after")
+    def validate_dispersion(self) -> "DispersionSettings":
+        names = (
+            self.short_horizon.name,
+            self.medium_horizon.name,
+            self.long_horizon.name,
+            *(item.name for item in self.additional_horizons),
+        )
+        if len(names) != len(set(names)):
+            raise ValueError("dispersion horizon names must be unique")
+        if len(self.universe) != len(set(self.universe)):
+            raise ValueError("dispersion universe symbols must be unique")
+        if (
+            self.historical_baseline_sessions
+            and self.minimum_baseline_samples > self.historical_baseline_sessions
+        ):
+            raise ValueError("minimum baseline samples exceeds baseline sessions")
+        low, high = self.tail_quantiles
+        if not 0 < low < 0.5 < high < 1 or abs(low + high - 1) > 1e-9:
+            raise ValueError("tail quantiles must be symmetric around the median")
+        return self
+
+
 class FeatureSettings(SettingsSection):
     trend: TrendSettings = Field(default_factory=TrendSettings)
     volatility: VolatilitySettings = Field(default_factory=VolatilitySettings)
     breadth: BreadthSettings = Field(default_factory=BreadthSettings)
     sectors: SectorSettings = Field(default_factory=SectorSettings)
     correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
+    dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
 
 
 class ReproducibilitySettings(SettingsSection):
