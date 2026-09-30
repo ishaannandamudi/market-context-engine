@@ -104,6 +104,7 @@ class QualityFlag(StrEnum):
     INSUFFICIENT_WINDOW_COVERAGE = "insufficient_window_coverage"
     HORIZON_DISAGREEMENT = "horizon_disagreement"
     INDEX_DISAGREEMENT = "index_disagreement"
+    FACTOR_IDENTIFICATION_WEAK = "factor_identification_weak"
 
 
 class EventRiskStatus(StrEnum):

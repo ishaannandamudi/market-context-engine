@@ -55,3 +55,7 @@ Typed per-symbol results expose raw intraday realized/bipower variation and semi
 ## Statistical regime research models (MCE-13)
 
 A diagonal Gaussian HMM now fits latent states with seeded restarts, log-space forward/backward inference, Baum-Welch, filtered current-state posteriors, and explicitly retrospective smoothing/Viterbi. K-means provides a non-temporal baseline; adjacent-window mean shifts provide offline change points. These outputs remain separate from the deterministic snapshot. See [HMM regime model](hmm-regime-model.md) and [statistical model evaluation](statistical-model-evaluation.md).
+
+## Dynamic factor and latent market structure (MCE-14)
+
+`FactorFeatureEngine` builds a point-in-time completed-session return panel from regular-session closing bars and historical membership. Rolling covariance or correlation PCA reports explained-variance shares, loadings, factor scores, effective dimension, dominance, residual/idiosyncratic variation, sector exposures, and cross-window alignment. Missing and stale symbols remain explicit, and insufficient coverage withholds factor headlines. Frozen walk-forward transforms and separate HMM/deterministic-regime comparisons preserve causal boundaries. Snapshot projection adds only continuous `factor.*` values and leaves categorical regimes intact. See [factor engine](factor-engine.md) for exact formulas and limitations.

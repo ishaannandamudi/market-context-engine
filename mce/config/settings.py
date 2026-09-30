@@ -444,6 +444,30 @@ class CorrelationSettings(SettingsSection):
         return self
 
 
+class FactorSettings(SettingsSection):
+    enabled: bool = True
+    universe: tuple[Symbol, ...] = ()
+    bar_cadence_ns: int = Field(default=60_000_000_000, gt=0)
+    window_sessions: int = Field(default=60, ge=5, le=5000)
+    factor_count: int = Field(default=3, ge=1, le=10)
+    variance_threshold: float | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
+    matrix_type: Literal["covariance", "correlation"] = "correlation"
+    minimum_symbols: int = Field(default=3, ge=2)
+    minimum_samples: int = Field(default=20, ge=3)
+    minimum_symbol_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_time_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    eigen_gap_tolerance: float = Field(default=0.02, ge=0, le=1, allow_inf_nan=False)
+    shock_min_samples: int = Field(default=5, ge=3)
+
+    @model_validator(mode="after")
+    def validate_factor(self) -> "FactorSettings":
+        if len(self.universe) != len(set(self.universe)):
+            raise ValueError("factor universe symbols must be unique")
+        if self.minimum_samples > self.window_sessions:
+            raise ValueError("factor minimum samples exceed window")
+        return self
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -721,6 +745,7 @@ class FeatureSettings(SettingsSection):
     breadth: BreadthSettings = Field(default_factory=BreadthSettings)
     sectors: SectorSettings = Field(default_factory=SectorSettings)
     correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
+    factor: FactorSettings = Field(default_factory=FactorSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)
