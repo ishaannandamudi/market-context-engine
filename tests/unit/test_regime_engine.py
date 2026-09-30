@@ -595,7 +595,7 @@ def test_snapshot_projection_and_adapters() -> None:
     as_of = 100
     state = _engine().compute(_evidence(as_of))
     snapshot = apply_regime_to_snapshot(state)
-    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.17.0"
+    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.18.0"
     assert snapshot.market_regime == MarketRegime.RISK_ON
     assert snapshot.trend_regime == TrendRegime.STRONG_UP
     assert snapshot.volatility_regime == VolatilityRegime.NORMAL

@@ -28,7 +28,7 @@ from tests.fixtures.samples import EFFECTIVE_NS, sample_snapshot
 
 def test_versioning_and_missing_analytics() -> None:
     snapshot = sample_snapshot()
-    assert __version__ == "0.17.0"
+    assert __version__ == "0.18.0"
     assert SCHEMA_VERSION == "1.0"
     assert snapshot.engine_version == __version__
     assert snapshot.schema_version == SCHEMA_VERSION
@@ -92,7 +92,7 @@ def test_complete_representative_snapshot_round_trip() -> None:
         feature_values={"available": True, "count": 3, "label": "sample", "rate": 0.2},
     )
     payload = canonical_json_str(snapshot)
-    assert '"engine_version":"0.17.0"' in payload
+    assert '"engine_version":"0.18.0"' in payload
     assert '"schema_version":"1.0"' in payload
     assert canonical_json_str(MarketContextSnapshot.model_validate_json(payload)) == payload
 

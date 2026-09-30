@@ -92,7 +92,7 @@ def test_opening_u_shape_and_cumulative_adjusted_rvol() -> None:
             feature_values={"liquidity.relative_volume": 0.25, "seasonality.volume.ratio": 999},
         ),
     )
-    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.17.0"
+    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.18.0"
     assert snapshot.market_regime == MarketRegime.RISK_OFF
     assert snapshot.feature_values is not None
     assert snapshot.feature_values["liquidity.relative_volume"] == 0.25

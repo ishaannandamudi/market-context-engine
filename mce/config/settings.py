@@ -561,6 +561,66 @@ class OptionsContextSettings(SettingsSection):
         return self
 
 
+class MacroImportanceWeights(SettingsSection):
+    low: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    medium: float = Field(default=0.50, ge=0, le=1, allow_inf_nan=False)
+    high: float = Field(default=1.0, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_order(self) -> "MacroImportanceWeights":
+        if not 0 <= self.low <= self.medium <= self.high:
+            raise ValueError("macro importance weights must be ordered")
+        return self
+
+
+class MacroCadenceAgeSettings(SettingsSection):
+    daily_ns: int = Field(default=7 * 86_400_000_000_000, gt=0)
+    weekly_ns: int = Field(default=21 * 86_400_000_000_000, gt=0)
+    monthly_ns: int = Field(default=70 * 86_400_000_000_000, gt=0)
+    quarterly_ns: int = Field(default=180 * 86_400_000_000_000, gt=0)
+    event_driven_ns: int = Field(default=365 * 86_400_000_000_000, gt=0)
+
+
+class MacroStressWeights(SettingsSection):
+    rates: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    curve: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    surprise: float = Field(default=0.40, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "MacroStressWeights":
+        if abs(self.rates + self.curve + self.surprise - 1.0) > 1e-9:
+            raise ValueError("macro stress weights must sum to one")
+        return self
+
+
+class MacroSettings(SettingsSection):
+    enabled: bool = True
+    minimum_quality: Literal["good", "degraded"] = "degraded"
+    history_limit: int = Field(default=60, ge=2)
+    minimum_history: int = Field(default=5, ge=2)
+    event_proximity_horizon_ns: int = Field(default=86_400_000_000_000, gt=0)
+    event_density_horizon_ns: int = Field(default=86_400_000_000_000, gt=0)
+    recent_release_horizon_ns: int = Field(default=3 * 86_400_000_000_000, gt=0)
+    policy_lookback_ns: int = Field(default=365 * 86_400_000_000_000, gt=0)
+    curve_max_observation_skew_ns: int = Field(default=2 * 86_400_000_000_000, ge=0)
+    policy_series_id: str | None = None
+    rate_move_scale_pp: float = Field(default=0.50, gt=0, allow_inf_nan=False)
+    curve_inversion_scale_pp: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    surprise_z_scale: float = Field(default=3.0, gt=0, allow_inf_nan=False)
+    minimum_stress_components: int = Field(default=2, ge=2, le=3)
+    importance_weights: MacroImportanceWeights = Field(default_factory=MacroImportanceWeights)
+    cadence_age: MacroCadenceAgeSettings = Field(default_factory=MacroCadenceAgeSettings)
+    stress_weights: MacroStressWeights = Field(default_factory=MacroStressWeights)
+
+    @model_validator(mode="after")
+    def validate_macro(self) -> "MacroSettings":
+        if self.minimum_history > self.history_limit:
+            raise ValueError("macro minimum history exceeds history limit")
+        if self.policy_series_id is not None and not self.policy_series_id.strip():
+            raise ValueError("policy series id must be nonempty")
+        return self
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -842,6 +902,7 @@ class FeatureSettings(SettingsSection):
     network: NetworkSettings = Field(default_factory=NetworkSettings)
     seasonality: SeasonalitySettings = Field(default_factory=SeasonalitySettings)
     options_context: OptionsContextSettings = Field(default_factory=OptionsContextSettings)
+    macro: MacroSettings = Field(default_factory=MacroSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)

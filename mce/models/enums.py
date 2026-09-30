@@ -115,6 +115,11 @@ class QualityFlag(StrEnum):
     OPTIONS_CIRCULAR_EVIDENCE = "options_circular_evidence"
     OPTIONS_HORIZON_MISMATCH = "options_horizon_mismatch"
     OPTIONS_UNDERLYING_PRICE_MISSING = "options_underlying_price_missing"
+    INSUFFICIENT_MACRO_HISTORY = "insufficient_macro_history"
+    MACRO_SOURCE_DEGRADED = "macro_source_degraded"
+    MACRO_EVENT_CONTEXT_UNAVAILABLE = "macro_event_context_unavailable"
+    MACRO_SERIES_STALE = "macro_series_stale"
+    MACRO_PARTIAL_CURVE = "macro_partial_curve"
 
 
 class EventRiskStatus(StrEnum):

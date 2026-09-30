@@ -75,7 +75,7 @@ def test_typed_correlation_adapter_config_fingerprint_and_snapshot() -> None:
     )
     projected = apply_network_to_snapshot(result, snapshot)
     assert projected.market_regime == MarketRegime.RISK_OFF
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.17.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "0.18.0"
     assert projected.feature_values is not None
     assert projected.feature_values["network.density"] == pytest.approx(1 / 3)
     assert projected.feature_values["trend.custom"] == 0.3
