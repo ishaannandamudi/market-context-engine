@@ -481,6 +481,36 @@ class NetworkSettings(SettingsSection):
     minimum_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
 
 
+class SeasonalitySettings(SettingsSection):
+    enabled: bool = True
+    universe: tuple[Symbol, ...] = ()
+    bucket_mode: Literal["wall_clock", "session_fraction"] = "wall_clock"
+    bucket_minutes: int | None = Field(default=5, ge=1, le=390)
+    session_fraction_bins: int | None = Field(default=None, ge=2, le=210)
+    bar_cadence_ns: Literal[60_000_000_000] = 60_000_000_000
+    baseline_sessions: int = Field(default=60, ge=2, le=252)
+    minimum_history_sessions: int = Field(default=20, ge=2)
+    minimum_member_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+    minimum_members: int = Field(default=3, ge=1)
+    quote_freshness_ns: int = Field(default=60_000_000_000, gt=0)
+
+    @model_validator(mode="after")
+    def validate_seasonality(self) -> "SeasonalitySettings":
+        if len(self.universe) != len(set(self.universe)):
+            raise ValueError("seasonality universe symbols must be unique")
+        if self.minimum_history_sessions > self.baseline_sessions:
+            raise ValueError("seasonality minimum history exceeds baseline sessions")
+        if self.bucket_mode == "wall_clock" and (
+            self.bucket_minutes is None or self.session_fraction_bins is not None
+        ):
+            raise ValueError("wall-clock buckets require minutes and no fraction bins")
+        if self.bucket_mode == "session_fraction" and (
+            self.session_fraction_bins is None or self.bucket_minutes is not None
+        ):
+            raise ValueError("fraction buckets require bins and no bucket minutes")
+        return self
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -760,6 +790,7 @@ class FeatureSettings(SettingsSection):
     correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
     factor: FactorSettings = Field(default_factory=FactorSettings)
     network: NetworkSettings = Field(default_factory=NetworkSettings)
+    seasonality: SeasonalitySettings = Field(default_factory=SeasonalitySettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)

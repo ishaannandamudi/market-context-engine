@@ -109,6 +109,7 @@ class QualityFlag(StrEnum):
     NETWORK_DISCONNECTED = "network_disconnected"
     COMMUNITY_STRUCTURE_WEAK = "community_structure_weak"
     NETWORK_TOPOLOGY_DEGRADED = "network_topology_degraded"
+    INSUFFICIENT_SEASONAL_HISTORY = "insufficient_seasonal_history"
 
 
 class EventRiskStatus(StrEnum):

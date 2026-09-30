@@ -123,6 +123,11 @@ class CausalDataStore:
     ) -> tuple[TradeObservation, ...]:
         return self._range(TradeObservation, symbol, start_ns, end_ns, as_of_ns)
 
+    def quotes(
+        self, symbol: str, start_ns: int, end_ns: int, as_of_ns: int
+    ) -> tuple[QuoteObservation, ...]:
+        return self._range(QuoteObservation, symbol, start_ns, end_ns, as_of_ns)
+
     def _latest(
         self, kind: type[MarketObservation], symbol: str, as_of_ns: int
     ) -> Observation | None:

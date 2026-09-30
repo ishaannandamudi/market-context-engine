@@ -30,7 +30,7 @@ Finite-sample bipower variation for `m >= 2` observed returns is `BV = (π/2) ×
 
 For a window with boundary `B`, `E = max(0, floor((min(as_of, regular_close)−B)/cadence))` is the number of configured-cadence intervals that should have completed, and `D = E × cadence` is the elapsed trading time used for scaling. `S` is the actual regular-session duration, 390 minutes on an ordinary full day and shorter on an early close. The annualized intraday volatility is `sqrt(RV × A × S/D)` when `E>0`. This scales observed window variation to a session, then to a trading year. `observed_return_count/E` is coverage. Gaps, including missing trailing bars, lower coverage and raise `INSUFFICIENT_WINDOW_COVERAGE` below the configured threshold. The available observed estimate remains visible with that flag; consumers can apply stricter gates. There is no intraday estimate without a return. Default windows are `5m`, `15m`, `30m`, `1h`, and the elapsed current session. Five-minute bars work by configuring a five-minute cadence.
 
-This scaling does not correct normal intraday U-shaped volatility seasonality. Minute-bar RV can be biased by market microstructure noise. Minute-of-day normalization, realized kernels, pre-averaging, and subsampling are deferred.
+This scaling does not correct normal intraday U-shaped volatility seasonality. MCE-16 provides a separate same-bucket bar-variance normalization without changing this raw MCE-4 estimate. Minute-bar RV can be biased by market microstructure noise. Realized kernels, pre-averaging, and subsampling remain deferred.
 
 ## Continuous context
 

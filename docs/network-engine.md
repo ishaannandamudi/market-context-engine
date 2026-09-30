@@ -162,5 +162,5 @@ calculations enter the normal config fingerprint.
 Topology depends on threshold and universe composition; compare scores only
 under compatible settings and coverage. Threshold communities can chain
 through weak bridges, and correlation is an estimate with sampling error.
-Network connectivity is not systemic-risk probability. Intraday seasonality
-and session-relative baselines remain deferred to MCE-16.
+Network connectivity is not systemic-risk probability. MCE-16 supplies separate
+session-relative baselines; it does not rewrite this network topology.
