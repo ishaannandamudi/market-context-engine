@@ -326,7 +326,7 @@ def test_snapshot_projection_preserves_upstream_regime_and_serialization() -> No
     )
     context = _engine().compute(EnsembleContextInput(as_of_ns=BASE, snapshot=base))
     projected = apply_ensemble_to_snapshot(context, base)
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.19.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "1.0.0"
     assert projected.market_regime == MarketRegime.RISK_OFF
     assert projected.feature_values is not None
     assert projected.feature_values["ensemble.headline"] == "broad_risk_on"

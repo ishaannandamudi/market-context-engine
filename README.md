@@ -1,31 +1,48 @@
 # Market Context Engine
 
-Market Context Engine (MCE) is a standalone research analytics project for broad U.S. equity-market context. It is designed to produce a typed, versioned `MarketContextSnapshot` that downstream research systems can consume. MCE is research analytics software. It does not execute trades.
+Market Context Engine (MCE) is a standalone Python research system for descriptive U.S. equity-market context. **MCE-1 through MCE-20 are complete; engine version is 1.0.0.** It produces typed, schema-1.0 `MarketContextSnapshot` results from causally available observations. It does not forecast returns, recommend trades, manage portfolios, or execute orders.
 
-**Current phase:** MCE-19, explainable ensemble market-context synthesis (`0.19.0`). MCE classifies NYSE trading sessions, replays canonical observations with an explicit clock, and computes trend, realized volatility, market breadth, point-in-time sector context, continuous dependence evidence, return dispersion, liquidity/stress context, causal return-panel factors, descriptive market-network topology, and prior-session intraday seasonal baselines. It combines observed features into explainable deterministic regime dimensions and measures their historical transitions. A separate statistical research package fits a diagonal Gaussian HMM, k-means baseline, and offline mean-shift detector. These analytics are descriptive, not forecasts.
+MCE covers XNYS sessions and causal ingestion/replay; trend, realized volatility, point-in-time breadth and sectors, correlation, dispersion, liquidity/stress, deterministic regimes and transition analytics; statistical/HMM research, factors, networks, seasonality, options and macro context; and an explainable ensemble. The MCE-20 pipeline runs existing engines in a validated dependency order, shares same-clock results, and emits separate lineage, diagnostics, and a deterministic snapshot fingerprint. Optional sources may be withheld without carrying old feature fields forward.
 
-## Design
-
-Provider adapters translate source-specific data into canonical bars, quotes, and trades. MCE includes deterministic in-memory historical data and membership providers and an XNYS exchange-calendar adapter. Trend, realized-volatility, breadth, sector, correlation, dispersion, liquidity/stress, and factor engines read the causal store; the network engine consumes typed same-clock dependence matrices. Their results can be projected into existing snapshot fields. The regime engine consumes same-clock upstream evidence and explicit prior regime history. Transition analytics consume its completed states through an immutable history index; neither engine keeps hidden state or recomputes upstream features. The snapshot is the integration boundary for Axiom Microstructure Engine (AME), which handles its own microstructure and execution research. A separate options engine supplies precomputed options context through a versioned provider-neutral contract; MCE consumes it without pricing options. MCE-18 consumes provider-neutral macro releases and point-in-time event calendars. MCE-19 combines precomputed context into reliability-weighted groups, explicit conflicts, and a separate descriptive ensemble headline without forecasting or trading.
-
-MCE uses UTC nanosecond timestamps internally and reserves U.S. Eastern Time for exchange-session interpretation and display. Every snapshot at time `T` must depend only on information effectively available by `T`. Unavailable analytics are `null`, never fabricated zeros. The factor engine uses completed regular-session close-to-close returns and point-in-time membership.
-
-See [architecture](docs/architecture.md), [data model](docs/data-model.md), [time semantics](docs/time-semantics.md), [calendar](docs/market-calendar.md), [ingestion](docs/ingestion.md), [replay](docs/replay.md), [feature windows](docs/features.md), [trend formulas](docs/trend-engine.md), [volatility formulas](docs/volatility-engine.md), [breadth formulas](docs/breadth-engine.md), [sector formulas](docs/sector-engine.md), [correlation formulas](docs/correlation-engine.md), [factor formulas](docs/factor-engine.md), [network formulas](docs/network-engine.md), [intraday seasonality](docs/intraday-seasonality-engine.md), [options context](docs/options-context-engine.md), [macro context](docs/macro-context-engine.md), [ensemble context](docs/ensemble-context-engine.md), [dispersion formulas](docs/dispersion-engine.md), [liquidity and stress formulas](docs/liquidity-stress-engine.md), [regime rules](docs/regime-engine.md), [regime transition analytics](docs/regime-transition-engine.md), [statistical feature preparation](docs/statistical-regime-modeling.md), [HMM regime model](docs/hmm-regime-model.md), [statistical model evaluation](docs/statistical-model-evaluation.md), [freshness and quality](docs/freshness-quality.md), and [development](docs/development.md).
-
-## Install and verify
+## Install and check
 
 ```sh
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/pytest
-.venv/bin/pytest --cov=mce --cov-report=term-missing
+.venv/bin/pytest --cov=mce --cov-report=term
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/mypy
 ```
 
-Python 3.11 or newer is required. No API keys or credentials are needed. Configuration can be supplied through nested environment variables such as `MCE_PROVIDER__SOURCE=file` or `MCE_REPLAY__MAX_OBSERVATIONS=50000`.
+No credentials are needed. Python 3.11 or newer is required. Runtime dependencies are Pydantic, pydantic-settings, exchange-calendars, and NumPy.
 
-## Roadmap boundary
+## Explicit-input quickstart
 
-MCE-12 prepares statistical feature vectors and evaluation datasets. MCE-13 adds latent-state research models. MCE-14 adds rolling PCA factors and factor-conditioned descriptive context. MCE-15 adds sparse market graphs, MST topology, centrality, communities, and explicit rolling rewiring while retaining the deterministic regime. MCE-16 adds same-session-bucket historical baselines and descriptive normalization. MCE-17 adds versioned options context, causal IV/RV comparison, term structure, skew, and descriptive options stress. MCE-18 adds vintage-aware macro observations, release surprises, policy and yield-curve context, and scheduled-event proximity. MCE-19 adds explainable context groups, reliability weighting, conflict records, and a separate ensemble headline. MCE-20 validation, replay orchestration, service/API integration, observability, and provider wiring remain deferred. Real vendor adapters, historical constituent feeds, corporate-action ingestion, Parquet I/O, persistent storage, and a local service also remain later work. MCE does not provide forecasts, brokerage integration, order routing, position management, stock selection, options valuation, or real-money trading.
+Save `config.json`:
+
+```json
+{"market":{"universe":{"broad_market":["SPY"]}}}
+```
+
+Save `observations.json` (one completed 2025-01-02 regular-session minute):
+
+```json
+{"observations":[{"kind":"bar","symbol":"SPY","source":"synthetic","event_timestamp_ns":1735828260000000000,"effective_timestamp_ns":1735828260000000000,"bar_start_ns":1735828200000000000,"bar_end_ns":1735828260000000000,"open":100,"high":101,"low":99,"close":100,"volume":1000}]}
+```
+
+```sh
+.venv/bin/python -m mce validate-config --config config.json
+.venv/bin/python -m mce snapshot --config config.json --input observations.json --as-of-ns 1735828260000000000 --output snapshot.json
+.venv/bin/python -m mce replay --config config.json --input observations.json --start-ns 1735828260000000000 --end-ns 1735828260000000000 --cadence completed_bar --output replay.jsonl
+.venv/bin/python -m mce serve --config config.json --input observations.json --host 127.0.0.1 --port 8000
+```
+
+The single-bar example validates the plumbing; many quantitative scores need longer history and multiple constituents. The CLI refuses to overwrite output unless `--force` is given. The local service exposes `/health`, `/ready`, `/version`, `/api/context/schema`, `/api/context/snapshot`, and `/api/context/replay` over preconfigured observations. It is a synchronous local research adapter without bundled authentication or TLS.
+
+## Contracts and limits
+
+All quantitative clocks are explicit UTC nanoseconds. Only completed regular-session bars available by `T` enter a snapshot at `T`; point-in-time membership, macro vintages, option availability, and filtered HMM artifact availability remain causal. A fresh snapshot is built for every call. Runtime timing and service metadata stay outside its fingerprint. Consumers such as AME read the snapshot or API contract and own any separate decision and execution logic.
+
+See [system architecture](docs/system-architecture.md), [service API](docs/service-api.md), [historical replay](docs/replay.md), [operations](docs/operations.md), [production-style readiness](docs/production-readiness.md), [feature catalog](docs/features.md), [ensemble formulas](docs/ensemble-context-engine.md), and [development](docs/development.md). The [changelog](CHANGELOG.md) records the 1.0.0 boundary. Real vendor integrations, persistent storage, distributed service deployment, and further large-scale load testing remain future infrastructure work.

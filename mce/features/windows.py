@@ -8,7 +8,7 @@ from enum import StrEnum
 from itertools import islice
 from typing import TYPE_CHECKING
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from mce.errors import CalendarRangeError
 from mce.models._base import FrozenModel
@@ -31,6 +31,15 @@ class WindowSpec(FrozenModel):
     name: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9_]*$")
     unit: WindowUnit
     length: int = Field(gt=0)
+
+    @field_validator("unit", mode="before")
+    @classmethod
+    def parse_unit(cls, value: object) -> WindowUnit:
+        if isinstance(value, WindowUnit):
+            return value
+        if isinstance(value, str):
+            return WindowUnit(value)
+        raise ValueError("window unit must be a known string")
 
     @model_validator(mode="after")
     def validate_unit(self) -> WindowSpec:

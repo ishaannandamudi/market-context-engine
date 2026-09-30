@@ -2,7 +2,7 @@
 
 `EnsembleContextFeatureEngine` combines **precomputed descriptive context** at UTC nanosecond clock `T`. It does not run upstream engines, train a meta-model, estimate future returns, or recommend trades. `EnsembleContextInput` requires a schema-1.0 `MarketContextSnapshot` at exactly `T` and optionally accepts typed trend, breadth, sector, volatility, liquidity/stress, correlation, dispersion, factor, network, deterministic regime, transition, filtered HMM, seasonality, options, and macro results. A typed source result supersedes the snapshot fallback for that family. Optional families remain missing, not zero. Future-dated upstream results and source availability are rejected. A source result from before `T` loses reliability with age.
 
-The MCE-10 deterministic classification, MCE-11 stability, and statistical/HMM state retain separate identities. The new headline is `ensemble.headline` in the `feature_values` namespace; `market_regime` and prior feature fields are never overwritten. Snapshot, statistical, options, and macro schemas remain 1.0; engine version is 0.19.0.
+The MCE-10 deterministic classification, MCE-11 stability, and statistical/HMM state retain separate identities. The new headline is `ensemble.headline` in the `feature_values` namespace; `market_regime` and prior feature fields are never overwritten. Snapshot, statistical, options, and macro schemas remain 1.0. The ensemble was introduced in engine version 0.19.0 and remains available in the 1.0.0 system release.
 
 ## Evidence groups and orientation
 

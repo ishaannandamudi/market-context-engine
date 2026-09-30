@@ -4,6 +4,7 @@ from bisect import bisect_left
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from hashlib import sha256
 from typing import TypeAlias, TypeVar, cast
 
 from mce.models.market_data import (
@@ -57,6 +58,26 @@ class CausalDataStore:
 
     def __len__(self) -> int:
         return len(self._arrival)
+
+    def causal_fingerprint(self, as_of_ns: int) -> str:
+        """Hash only observations available by the requested replay clock."""
+
+        if as_of_ns < 0:
+            raise ValueError("as_of_ns must be nonnegative")
+        visible = sorted(
+            (
+                item
+                for bucket in self._buckets.values()
+                for item in bucket.observations
+                if item.effective_timestamp_ns <= as_of_ns
+            ),
+            key=observation_order_key,
+        )
+        digest = sha256()
+        for item in visible:
+            digest.update(canonical_json_bytes(item))
+            digest.update(b"\n")
+        return digest.hexdigest()
 
     def add(self, observation: Observation) -> bool:
         """Return False only for an exact repeated bar/quote; trades are never deduped."""

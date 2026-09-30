@@ -79,3 +79,7 @@ A diagonal Gaussian HMM now fits latent states with seeded restarts, log-space f
 ## Explainable ensemble context (MCE-19)
 
 `EnsembleContextFeatureEngine` consumes precomputed same-clock source results and a schema-1.0 snapshot. It groups correlated evidence before computing a signed core market score, weights active evidence by source quality, coverage, age, and model diagnostics, and retains stable contradiction records. Separate outputs report external risk, temporal stability, disagreement, uncertainty, evidence strength, contributors, and an ordered rule trace. Only causal filtered HMM inference is accepted. The additive `ensemble.*` snapshot projection preserves MCE-10 deterministic and statistical outputs. See [ensemble context engine](ensemble-context-engine.md) for weights, formulas, headline precedence, and limits.
+
+## End-to-end orchestration (MCE-20)
+
+`MarketContextPipeline` validates the dependency DAG, computes enabled feature families from a causal store, reuses immutable upstream results, projects a fresh schema-1.0 snapshot, and emits deterministic lineage/fingerprint separately from operational timing. `MarketContextReplay` advances explicit historical clocks at completed bars, N-minute session intervals, session closes, or supplied timestamps. Optional context can be withheld without copying stale fields. The local service and CLI expose bounded snapshot/replay requests. See [system architecture](system-architecture.md), [service API](service-api.md), and [operations](operations.md).

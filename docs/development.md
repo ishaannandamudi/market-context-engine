@@ -23,6 +23,8 @@ MCE-2 added `exchange-calendars` for maintained holiday/early-close schedules. M
 
 The engine version lives only in `mce/version.py`; the package reads it dynamically. The separate schema version is in the same file. Before changing the snapshot, review JSON compatibility, causal semantics, and AME deserialization. Additive optional fields can be a minor schema change; incompatible changes need a new major version and an explicit migration strategy.
 
+MCE-20 promotes the engine to 1.0.0 while leaving snapshot, statistical, options, and macro schemas at 1.0. The final validation checklist is in [production readiness](production-readiness.md). The consolidated benchmark is `.venv/bin/python -m benchmarks.full_pipeline --symbols 500 --bars 30 --snapshots 2 --prior-sessions 22`; it measures replay ingest plus orchestrated snapshots and reports stage times separately. The local CLI and WSGI adapter add no runtime dependency.
+
 Manual MCE-3 benchmark on Python 3.11.16, macOS 26.6.2, arm64: 1,170 one-minute bars (three symbols, one 390-minute session), 20 five-minute snapshot times, all default horizons: about 0.5 seconds total, about 25 ms per snapshot. This is a local observation, not a CI timing gate. Run `python benchmarks/trend.py` to measure your machine.
 
 Manual MCE-4 benchmark on the same Python/macOS/arm64 environment: 70,200 one-minute bars across 60 regular sessions and three symbols, 20 snapshots, close-to-close, intraday RV/BV, Parkinson, Garman–Klass, Rogers–Satchell, and Yang–Zhang enabled: 0.925 seconds total, 46.2 ms per snapshot. Data construction is excluded from timing. This is a local observation, not a CI timing gate. Run `python benchmarks/volatility.py` to measure your machine.
