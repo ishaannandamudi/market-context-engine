@@ -78,7 +78,7 @@ def test_matrix_invariants_score_snapshot_and_replay(calendar: MarketSessionServ
     assert projected.correlation_regime == CorrelationRegime.UNKNOWN
     assert projected.feature_values is not None
     assert projected.feature_values["correlation.average"] == result.average_pairwise_correlation
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.16.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "0.17.0"
     with pytest.raises(ValueError):
         apply_correlation_to_snapshot(result, MarketContextSnapshot(as_of_ns=asof + 1))
 

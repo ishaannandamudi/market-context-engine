@@ -511,6 +511,56 @@ class SeasonalitySettings(SettingsSection):
         return self
 
 
+class OptionsStressWeights(SettingsSection):
+    iv: float = Field(default=0.30, ge=0, le=1, allow_inf_nan=False)
+    skew: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    term: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    dislocation: float = Field(default=0.20, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_sum(self) -> "OptionsStressWeights":
+        if abs(self.iv + self.skew + self.term + self.dislocation - 1.0) > 1e-9:
+            raise ValueError("options stress weights must sum to one")
+        return self
+
+
+class OptionsContextSettings(SettingsSection):
+    enabled: bool = True
+    broad_underlyings: tuple[Symbol, ...] = ("SPY",)
+    sector_underlyings: tuple[Symbol, ...] = ()
+    target_tenor_days: int = Field(default=30, ge=1)
+    tenor_match_tolerance_days: float = Field(default=7.0, ge=0, allow_inf_nan=False)
+    minimum_quality: Literal["good", "degraded"] = "degraded"
+    maximum_market_age_ns: int = Field(default=900_000_000_000, gt=0)
+    history_window: int = Field(default=60, ge=2)
+    minimum_history: int = Field(default=10, ge=2)
+    minimum_surface_points: int = Field(default=5, ge=1)
+    minimum_tenors: int = Field(default=2, ge=2)
+    minimum_broad_coverage: float = Field(default=0.67, gt=0, le=1, allow_inf_nan=False)
+    skew_coordinate: Literal["delta", "log_moneyness", "relative_moneyness"] = "delta"
+    wing_abs_coordinate: float = Field(default=0.25, gt=0, allow_inf_nan=False)
+    coordinate_tolerance: float = Field(default=0.02, ge=0, allow_inf_nan=False)
+    term_inversion_scale: float = Field(default=0.10, gt=0, allow_inf_nan=False)
+    minimum_stress_components: int = Field(default=2, ge=2, le=4)
+    stress_weights: OptionsStressWeights = Field(default_factory=OptionsStressWeights)
+
+    @model_validator(mode="after")
+    def validate_options_context(self) -> "OptionsContextSettings":
+        if not self.broad_underlyings or len(set(self.broad_underlyings)) != len(
+            self.broad_underlyings
+        ):
+            raise ValueError("options broad underlyings must be nonempty and unique")
+        if len(set(self.sector_underlyings)) != len(self.sector_underlyings) or set(
+            self.broad_underlyings
+        ) & set(self.sector_underlyings):
+            raise ValueError("options broad and sector underlyings must be distinct")
+        if self.skew_coordinate == "delta" and self.wing_abs_coordinate >= 1:
+            raise ValueError("delta wing coordinate must be below one")
+        if self.minimum_history > self.history_window:
+            raise ValueError("options minimum history exceeds window")
+        return self
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -791,6 +841,7 @@ class FeatureSettings(SettingsSection):
     factor: FactorSettings = Field(default_factory=FactorSettings)
     network: NetworkSettings = Field(default_factory=NetworkSettings)
     seasonality: SeasonalitySettings = Field(default_factory=SeasonalitySettings)
+    options_context: OptionsContextSettings = Field(default_factory=OptionsContextSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)

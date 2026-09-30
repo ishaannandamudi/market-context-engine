@@ -110,6 +110,11 @@ class QualityFlag(StrEnum):
     COMMUNITY_STRUCTURE_WEAK = "community_structure_weak"
     NETWORK_TOPOLOGY_DEGRADED = "network_topology_degraded"
     INSUFFICIENT_SEASONAL_HISTORY = "insufficient_seasonal_history"
+    OPTIONS_MODE_LIMITED = "options_mode_limited"
+    OPTIONS_SURFACE_SPARSE = "options_surface_sparse"
+    OPTIONS_CIRCULAR_EVIDENCE = "options_circular_evidence"
+    OPTIONS_HORIZON_MISMATCH = "options_horizon_mismatch"
+    OPTIONS_UNDERLYING_PRICE_MISSING = "options_underlying_price_missing"
 
 
 class EventRiskStatus(StrEnum):
