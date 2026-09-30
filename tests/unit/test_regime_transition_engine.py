@@ -377,7 +377,7 @@ def test_config_snapshot_and_classifier_source_contract(calendar: MarketSessionS
         as_of_ns=times[-1], market_regime=MarketRegime.RISK_OFF, confidence=0.8
     )
     projected = apply_regime_transition_to_snapshot(result, original)
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.12.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "0.13.0"
     assert projected.market_regime == MarketRegime.RISK_OFF
     assert projected.confidence == 0.8
     assert projected.feature_values is not None

@@ -741,6 +741,28 @@ class StatisticalSplitSettings(SettingsSection):
     mode: Literal["expanding", "rolling"] = "expanding"
 
 
+class HMMSettings(SettingsSection):
+    state_count: int = Field(default=3, ge=2, le=6)
+    max_iterations: int = Field(default=100, ge=1, le=1000)
+    tolerance: float = Field(default=1e-5, gt=0, allow_inf_nan=False)
+    covariance_floor: float = Field(default=1e-4, gt=0, allow_inf_nan=False)
+    restarts: int = Field(default=3, ge=1, le=20)
+    minimum_occupancy: float = Field(default=0.01, ge=0, lt=1, allow_inf_nan=False)
+
+
+class KMeansSettings(SettingsSection):
+    cluster_count: int = Field(default=3, ge=2, le=6)
+    max_iterations: int = Field(default=100, ge=1, le=1000)
+    restarts: int = Field(default=3, ge=1, le=20)
+
+
+class ChangePointSettings(SettingsSection):
+    left_window: int = Field(default=20, ge=2)
+    right_window: int = Field(default=20, ge=2)
+    threshold: float = Field(default=2.0, gt=0, allow_inf_nan=False)
+    minimum_separation: int = Field(default=10, ge=1)
+
+
 class StatisticalSettings(SettingsSection):
     enabled: bool = False
     feature_set: Literal["1.0"] = "1.0"
@@ -749,6 +771,9 @@ class StatisticalSettings(SettingsSection):
     split: StatisticalSplitSettings = Field(default_factory=StatisticalSplitSettings)
     state_count: int = Field(default=3, ge=2, le=6)
     random_seed: int = Field(default=0, ge=0)
+    hmm: HMMSettings = Field(default_factory=HMMSettings)
+    kmeans: KMeansSettings = Field(default_factory=KMeansSettings)
+    change_point: ChangePointSettings = Field(default_factory=ChangePointSettings)
 
 
 class MCEConfig(BaseSettings):

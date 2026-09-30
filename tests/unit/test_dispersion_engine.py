@@ -91,7 +91,7 @@ def test_return_moments_horizons_history_and_snapshot(calendar: MarketSessionSer
     assert result.within_sector_share + result.between_sector_share == pytest.approx(1)
     assert sum(item.contribution or 0 for item in result.contributors) == result.dispersion_score
     projected = apply_dispersion_to_snapshot(result)
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.12.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "0.13.0"
     assert projected.dispersion_score == 1
     assert projected.dispersion_regime == DispersionRegime.UNKNOWN
     assert projected.feature_values is not None

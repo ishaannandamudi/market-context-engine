@@ -20,6 +20,14 @@ def synthetic_states(kind: str, count: int = 30) -> tuple[int, ...]:
         return tuple(index % 2 for index in range(count))
     if kind == "long_dwell":
         return tuple(0 if index < count - 2 else 1 for index in range(count))
+    if kind == "rare_state":
+        return tuple(2 if index >= count - 2 else (index // 6) % 2 for index in range(count))
+    if kind == "mean_shift":
+        return tuple(0 if index < count // 2 else 1 for index in range(count))
+    if kind == "changing_variance":
+        return tuple(0 if index < count // 2 else 1 for index in range(count))
+    if kind == "low_separation":
+        return tuple((index // 5) % 2 for index in range(count))
     raise ValueError("unknown synthetic scenario")
 
 
@@ -31,7 +39,13 @@ def synthetic_dataset(kind: str, count: int = 30) -> tuple[StatisticalDataset, t
     snapshots = []
     for index, state in enumerate(states):
         _, close = calendar.regular_session_bounds(day)
-        noise = (index % 3 - 1) * (0.12 if kind == "overlapping" else 0.01)
+        noise_scale = 0.12 if kind in ("overlapping", "low_separation") else 0.01
+        if kind == "changing_variance" and state == 1:
+            noise_scale = 0.15
+        noise = (index % 3 - 1) * noise_scale
+        direction = (0.1, 0.0, -0.1) if kind == "low_separation" else (0.7, 0.0, -0.7)
+        volatility = (0.4, 0.5, 0.6) if kind == "low_separation" else (0.15, 0.6, 0.9)
+        stress = (0.45, 0.5, 0.55) if kind == "low_separation" else (0.1, 0.5, 0.9)
         values = {
             "breadth.net_advance_fraction": (0.5, 0.0, -0.5)[state],
             "breadth.participation": 0.5,
@@ -40,7 +54,7 @@ def synthetic_dataset(kind: str, count: int = 30) -> tuple[StatisticalDataset, t
             "sector.rotation.velocity": 0.3,
             "correlation.first_eigen_share": 0.4,
             "dispersion.between_sector_share": 0.5,
-            "stress.systemic": (0.1, 0.5, 0.9)[state],
+            "stress.systemic": stress[state],
             "stress.localized": 0.2,
             "regime_transition.stability": 0.8,
             "regime_transition.intensity": 0.2,
@@ -50,13 +64,13 @@ def synthetic_dataset(kind: str, count: int = 30) -> tuple[StatisticalDataset, t
         snapshots.append(
             MarketContextSnapshot(
                 as_of_ns=close,
-                market_direction_score=max(-1.0, min(1.0, (0.7, 0.0, -0.7)[state] + noise)),
-                volatility_score=max(0.0, min(1.0, (0.15, 0.6, 0.9)[state] + noise)),
+                market_direction_score=max(-1.0, min(1.0, direction[state] + noise)),
+                volatility_score=max(0.0, min(1.0, volatility[state] + noise)),
                 breadth_score=(0.5, 0.0, -0.5)[state],
                 dispersion_score=0.3,
                 correlation_score=0.4,
                 liquidity_score=0.5,
-                stress_score=(0.1, 0.5, 0.9)[state],
+                stress_score=stress[state],
                 feature_values=values,
                 data_quality=DataQuality.DEGRADED if index % 11 == 0 else DataQuality.GOOD,
             )

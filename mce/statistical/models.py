@@ -1,4 +1,4 @@
-"""Latent-state contracts; no fitted statistical model is shipped in MCE-12."""
+"""Shared latent-state contracts; deterministic regimes remain separate."""
 
 from dataclasses import dataclass
 from math import isfinite
@@ -20,6 +20,8 @@ class LatentStateInference:
     model_version: str
     feature_schema_version: str
     quality_flags: frozenset[QualityFlag] = frozenset()
+    posterior_entropy: float | None = None
+    model_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         if self.state_id < 0 or self.training_end_ns < 0 or self.as_of_ns < 0:
@@ -34,6 +36,14 @@ class LatentStateInference:
                 raise ValueError("invalid state probabilities")
             if abs(sum(probs) - 1.0) > 1e-8:
                 raise ValueError("state probabilities must sum to one")
+        if self.posterior_entropy is not None and (
+            not isfinite(self.posterior_entropy) or self.posterior_entropy < 0
+        ):
+            raise ValueError("posterior entropy must be finite and nonnegative")
+
+    @property
+    def causal(self) -> bool:
+        return self.mode == "filtered" and not self.retrospective
 
 
 @dataclass(frozen=True, slots=True)

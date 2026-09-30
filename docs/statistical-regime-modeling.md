@@ -1,9 +1,9 @@
-# Statistical regime modeling foundation (MCE-12)
+# Statistical regime modeling foundation (MCE-12 and MCE-13)
 
 MCE has two separate concepts. The MCE-10 deterministic regime is the rule-based
-description in `MarketContextSnapshot`. A future statistical latent state is an
-unobserved model label whose integer ID has no fixed market meaning. MCE-12 does not
-fit or infer a statistical model and does not project one into the public snapshot.
+description in `MarketContextSnapshot`. A statistical latent state is an
+unobserved model label whose integer ID has no fixed market meaning. MCE-12 prepared
+the dataset contracts; MCE-13 fits research models separately from the public snapshot.
 The snapshot schema remains 1.0.
 
 ## Feature contract and causal rows
@@ -64,7 +64,7 @@ It rejects a changed schema version, fingerprint, or feature order. The fitted
 transform also rejects a changed result-relevant configuration fingerprint. The fitted
 artifact stores methods, medians, centers, scales, constant flags, training time
 range, row count, and training-only fingerprint. Persist the artifact with any
-future model; do not refit it on validation or test rows.
+fitted model; do not refit it on validation or test rows.
 
 The dataset fingerprint hashes schema and configuration fingerprints,
 normalization setting, row clocks, vectors, masks, quality, regime annotations,
@@ -74,7 +74,7 @@ fingerprint. Split fingerprints additionally hash every boundary, indices,
 embargo, split settings and dataset fingerprint. Model metadata can record the
 model type/version, training interval/count, seed, normalizer, split, dataset,
 feature/config fingerprints and parameter hash. No wall-clock creation timestamp
-enters these hashes. Future stochastic models must take an explicit seed.
+enters these hashes. Stochastic models take an explicit seed.
 
 ## Session splits and walk-forward evaluation
 
@@ -98,8 +98,7 @@ volatility centroid, then decreasing direction centroid, with raw ID only as a
 tie breaker. Missing centroids sort last. This is a stable *within-fit* convention,
 not proof that states in different fits have the same economic meaning. For
 cross-fit matching, compare profiles and document the matching rule. Apply any
-mapping consistently to probabilities, transition matrices, and artifact metadata
-in a future model.
+mapping consistently to probabilities, transition matrices, and artifact metadata.
 
 `evaluate_states` reports count occupancy, session-weighted occupancy (each
 observed trading session receives total weight 1), centroid, median and dispersion
@@ -113,12 +112,12 @@ these diagnostics alone selects the best market model.
 
 ## HMM mathematical preparation and causal meaning
 
-For an eventual K-state Gaussian HMM, hidden state `z_t` follows initial
+For the K-state Gaussian HMM, hidden state `z_t` follows initial
 probabilities `π_i=P(z_1=i)` and row-stochastic transitions
 `A_ij=P(z_t=j|z_(t-1)=i)`. Emissions are
 `b_i(x_t)=N(x_t; μ_i, Σ_i)`, initially with diagonal positive covariance and a
 variance floor. Full covariance would require positive-definiteness checks and
-regularization. Define `ℓ_t(i)=log b_i(x_t)` and implement all recursions with
+regularization. Define `ℓ_t(i)=log b_i(x_t)` and compute all recursions with
 log-sum-exp (or proven scaling) to prevent underflow:
 
 ```
@@ -145,9 +144,11 @@ Smoothing `P(z_t|x_1:T, θ)` with `T>t` and full-sequence Viterbi use later
 observations, so they are retrospective research outputs. In-sample filtered
 results are also retrospective if fitted on the evaluated period. The inference
 contract records mode, training end, and retrospective status and rejects a false
-causal claim. MCE-12 does not run forward/backward, EM or Viterbi, and no
+causal claim. MCE-13 adds forward/backward, EM and Viterbi; no
 statistical output enters historical replay or the deterministic snapshot.
 
-MCE-13 may implement a thoroughly tested diagonal Gaussian HMM, model-size
-comparison, change points and clustering. There is no forecasting, trading,
-broker integration or production retraining in this foundation.
+MCE-13 implements the diagonal Gaussian HMM, model-size comparison, k-means
+baseline and mean-shift detector. See [HMM regime model](hmm-regime-model.md) and
+[statistical model evaluation](statistical-model-evaluation.md) for implementation,
+artifact and causality details. There is no forecasting, trading, broker
+integration or production retraining in this foundation.

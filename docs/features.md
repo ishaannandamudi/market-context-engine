@@ -51,3 +51,7 @@ Typed per-symbol results expose raw intraday realized/bipower variation and semi
 ## Statistical preparation (MCE-12)
 
 `mce.statistical` defines an 18-feature ordered schema, constructs causal point-in-time rows from completed context snapshots, retains optional missingness and upstream quality, fits median imputation/scaling only on explicit training rows, and creates XNYS session-based walk-forward splits with embargo. Latent-state profiles, canonical label ordering and descriptive evaluation are separate from MCE-10 deterministic regime fields. No HMM is fitted or projected. See [statistical regime modeling](statistical-regime-modeling.md) for the schema, formulas, leakage boundaries and HMM preparation.
+
+## Statistical regime research models (MCE-13)
+
+A diagonal Gaussian HMM now fits latent states with seeded restarts, log-space forward/backward inference, Baum-Welch, filtered current-state posteriors, and explicitly retrospective smoothing/Viterbi. K-means provides a non-temporal baseline; adjacent-window mean shifts provide offline change points. These outputs remain separate from the deterministic snapshot. See [HMM regime model](hmm-regime-model.md) and [statistical model evaluation](statistical-model-evaluation.md).
