@@ -468,6 +468,19 @@ class FactorSettings(SettingsSection):
         return self
 
 
+class NetworkSettings(SettingsSection):
+    enabled: bool = True
+    source_matrix: Literal["raw", "shrunk"] = "raw"
+    graph_mode: Literal["threshold", "top_k", "mst"] = "threshold"
+    correlation_threshold: float = Field(default=0.6, ge=-1, le=1, allow_inf_nan=False)
+    top_k: int = Field(default=3, ge=1)
+    community_threshold: float = Field(default=0.7, ge=-1, le=1, allow_inf_nan=False)
+    mst_enabled: bool = True
+    eigenvector_enabled: bool = True
+    minimum_nodes: int = Field(default=3, ge=2)
+    minimum_coverage: float = Field(default=0.8, gt=0, le=1, allow_inf_nan=False)
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -746,6 +759,7 @@ class FeatureSettings(SettingsSection):
     sectors: SectorSettings = Field(default_factory=SectorSettings)
     correlation: CorrelationSettings = Field(default_factory=CorrelationSettings)
     factor: FactorSettings = Field(default_factory=FactorSettings)
+    network: NetworkSettings = Field(default_factory=NetworkSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)

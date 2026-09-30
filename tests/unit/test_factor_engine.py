@@ -96,7 +96,7 @@ def test_factor_context_sector_exposure_alignment_and_snapshot() -> None:
     original = MarketContextSnapshot(as_of_ns=second.as_of_ns, market_regime=MarketRegime.RISK_ON)
     projected = apply_factors_to_snapshot(second, original)
     assert projected.market_regime == MarketRegime.RISK_ON
-    assert projected.schema_version == "1.0" and projected.engine_version == "0.14.0"
+    assert projected.schema_version == "1.0" and projected.engine_version == "0.15.0"
     assert projected.feature_values is not None
     assert projected.feature_values["factor.first.explained_variance"] == second.first_share
     assert (

@@ -105,6 +105,10 @@ class QualityFlag(StrEnum):
     HORIZON_DISAGREEMENT = "horizon_disagreement"
     INDEX_DISAGREEMENT = "index_disagreement"
     FACTOR_IDENTIFICATION_WEAK = "factor_identification_weak"
+    INSUFFICIENT_NETWORK_COVERAGE = "insufficient_network_coverage"
+    NETWORK_DISCONNECTED = "network_disconnected"
+    COMMUNITY_STRUCTURE_WEAK = "community_structure_weak"
+    NETWORK_TOPOLOGY_DEGRADED = "network_topology_degraded"
 
 
 class EventRiskStatus(StrEnum):
