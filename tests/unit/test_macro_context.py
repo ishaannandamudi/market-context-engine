@@ -550,7 +550,7 @@ def test_cadence_quality_dimensions_and_snapshot_preservation() -> None:
             feature_values={"options.iv.atm": 0.2, "macro.old": 99},
         ),
     )
-    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.18.0"
+    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.19.0"
     assert snapshot.market_regime == MarketRegime.RISK_OFF and snapshot.stress_score == 0.77
     assert snapshot.feature_values is not None
     assert snapshot.feature_values["options.iv.atm"] == 0.2

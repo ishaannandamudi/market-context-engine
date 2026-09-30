@@ -621,6 +621,84 @@ class MacroSettings(SettingsSection):
         return self
 
 
+class EnsembleGroupWeights(SettingsSection):
+    direction: float = Field(default=0.30, ge=0, le=1, allow_inf_nan=False)
+    participation: float = Field(default=0.20, ge=0, le=1, allow_inf_nan=False)
+    volatility_stress: float = Field(default=0.25, ge=0, le=1, allow_inf_nan=False)
+    liquidity_health: float = Field(default=0.15, ge=0, le=1, allow_inf_nan=False)
+    systemic_structure: float = Field(default=0.10, ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_weights(self) -> "EnsembleGroupWeights":
+        if abs(sum(self.model_dump().values()) - 1.0) > 1e-9:
+            raise ValueError("ensemble core group weights must sum to one")
+        return self
+
+
+class EnsembleThresholds(SettingsSection):
+    positive_direction: float = Field(default=0.35, gt=0, le=1, allow_inf_nan=False)
+    positive_participation: float = Field(default=0.20, gt=0, le=1, allow_inf_nan=False)
+    calm_stress: float = Field(default=0.35, ge=0, lt=1, allow_inf_nan=False)
+    elevated_stress: float = Field(default=0.50, gt=0, le=1, allow_inf_nan=False)
+    severe_stress: float = Field(default=0.80, gt=0, le=1, allow_inf_nan=False)
+    systemic_structure: float = Field(default=0.65, gt=0, le=1, allow_inf_nan=False)
+    poor_liquidity: float = Field(default=0.25, ge=0, lt=1, allow_inf_nan=False)
+    healthy_liquidity: float = Field(default=0.55, gt=0, le=1, allow_inf_nan=False)
+    high_disagreement: float = Field(default=0.65, gt=0, le=1, allow_inf_nan=False)
+    low_stability: float = Field(default=0.35, ge=0, lt=1, allow_inf_nan=False)
+    external_event: float = Field(default=0.85, gt=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_order(self) -> "EnsembleThresholds":
+        if not self.calm_stress < self.elevated_stress < self.severe_stress:
+            raise ValueError("ensemble stress thresholds must increase")
+        if not self.poor_liquidity < self.healthy_liquidity:
+            raise ValueError("ensemble liquidity thresholds must increase")
+        return self
+
+
+class EnsembleSettings(SettingsSection):
+    enabled: bool = True
+    max_source_age_ns: int = Field(default=86_400_000_000_000, gt=0)
+    minimum_reliability: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    minimum_active_groups: int = Field(default=3, ge=1, le=5)
+    minimum_critical_groups: int = Field(default=3, ge=1, le=4)
+    minimum_active_families: int = Field(default=4, ge=1)
+    group_weights: EnsembleGroupWeights = Field(default_factory=EnsembleGroupWeights)
+    thresholds: EnsembleThresholds = Field(default_factory=EnsembleThresholds)
+    external_event_headline_enabled: bool = False
+    precedence: tuple[str, ...] = (
+        "systemic_stress",
+        "liquidity_stress",
+        "volatility_stress",
+        "broad_risk_off",
+        "broad_risk_on",
+        "rotation",
+        "calm_range",
+        "external_event_risk",
+        "transitional",
+        "mixed",
+    )
+
+    @model_validator(mode="after")
+    def validate_precedence(self) -> "EnsembleSettings":
+        required = {
+            "systemic_stress",
+            "liquidity_stress",
+            "volatility_stress",
+            "broad_risk_off",
+            "broad_risk_on",
+            "rotation",
+            "calm_range",
+            "external_event_risk",
+            "transitional",
+            "mixed",
+        }
+        if len(self.precedence) != len(required) or set(self.precedence) != required:
+            raise ValueError("ensemble precedence must list each headline rule exactly once")
+        return self
+
+
 class DispersionSettings(SettingsSection):
     enabled: bool = True
     universe: tuple[Symbol, ...] = ()
@@ -903,6 +981,7 @@ class FeatureSettings(SettingsSection):
     seasonality: SeasonalitySettings = Field(default_factory=SeasonalitySettings)
     options_context: OptionsContextSettings = Field(default_factory=OptionsContextSettings)
     macro: MacroSettings = Field(default_factory=MacroSettings)
+    ensemble: EnsembleSettings = Field(default_factory=EnsembleSettings)
     dispersion: DispersionSettings = Field(default_factory=DispersionSettings)
     liquidity: LiquiditySettings = Field(default_factory=LiquiditySettings)
     stress: StressSettings = Field(default_factory=StressSettings)

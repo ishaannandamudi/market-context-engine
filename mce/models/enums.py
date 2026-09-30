@@ -120,6 +120,9 @@ class QualityFlag(StrEnum):
     MACRO_EVENT_CONTEXT_UNAVAILABLE = "macro_event_context_unavailable"
     MACRO_SERIES_STALE = "macro_series_stale"
     MACRO_PARTIAL_CURVE = "macro_partial_curve"
+    ENSEMBLE_INSUFFICIENT_EVIDENCE = "ensemble_insufficient_evidence"
+    ENSEMBLE_SOURCE_DEGRADED = "ensemble_source_degraded"
+    ENSEMBLE_HIGH_DISAGREEMENT = "ensemble_high_disagreement"
 
 
 class EventRiskStatus(StrEnum):

@@ -421,7 +421,7 @@ def test_multi_underlying_sector_dispersion_snapshot_and_config_fingerprint() ->
             feature_values={"trend.score": 0.3, "options.old": 9},
         ),
     )
-    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.18.0"
+    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.19.0"
     assert snapshot.market_regime == MarketRegime.RISK_OFF and snapshot.stress_score == 0.77
     assert snapshot.realized_volatility == 0.2
     assert snapshot.feature_values is not None

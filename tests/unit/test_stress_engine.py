@@ -117,7 +117,7 @@ def test_liquidity_reference_numbers_snapshot_and_serialization(
         stress.stress_score
     )
     snapshot = apply_liquidity_stress_to_snapshot(result)
-    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.18.0"
+    assert snapshot.schema_version == "1.0" and snapshot.engine_version == "0.19.0"
     assert snapshot.liquidity_score == liquid.liquidity_score
     assert snapshot.stress_score == stress.stress_score
     assert snapshot.market_regime == MarketRegime.UNKNOWN
